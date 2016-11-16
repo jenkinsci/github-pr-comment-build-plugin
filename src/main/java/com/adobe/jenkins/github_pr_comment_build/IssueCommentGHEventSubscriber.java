@@ -143,7 +143,9 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                         }
                                         propFound = true;
                                         String expectedCommentBody = ((TriggerPRCommentBranchProperty) prop).getCommentBody();
-                                        if (expectedCommentBody.equalsIgnoreCase(commentBody)) {
+                                        Pattern pattern = Pattern.compile(expectedCommentBody,
+                                                Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+                                        if (commentBody == null || pattern.matcher(commentBody).matches()) {
                                             ParameterizedJobMixIn.scheduleBuild2(job, 0,
                                                     new CauseAction(new GitHubPullRequestCommentCause(commentUrl)));
                                             LOGGER.log(Level.FINE,

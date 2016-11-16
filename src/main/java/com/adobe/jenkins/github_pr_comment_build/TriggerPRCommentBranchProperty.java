@@ -32,7 +32,7 @@ public class TriggerPRCommentBranchProperty extends BranchProperty {
      */
     public String getCommentBody() {
         if (commentBody == null || commentBody.isEmpty()) {
-            return "REBUILD";
+            return "^REBUILD$";
         }
         return commentBody;
     }
