@@ -89,7 +89,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
         }
 
         final String pullRequestId = matcher.group(1);
-        final String pullRequestJobName = "PR-" + pullRequestId;
+        final Pattern pullRequestJobNamePattern = Pattern.compile("^PR-" + pullRequestId + "\\b.*$", Pattern.CASE_INSENSITIVE);
 
         // Verify that the comment body matches the trigger build string
         final String commentBody = json.getJSONObject("comment").getString("body");
@@ -131,7 +131,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                         if (gitHubSCMSource.getRepoOwner().equalsIgnoreCase(changedRepository.getUserName()) &&
                                 gitHubSCMSource.getRepository().equalsIgnoreCase(changedRepository.getRepositoryName())) {
                             for (Job<?, ?> job : owner.getAllJobs()) {
-                                if (job.getName().equalsIgnoreCase(pullRequestJobName)) {
+                                if (pullRequestJobNamePattern.matcher(job.getName()).matches()) {
                                     if (!(job.getParent() instanceof MultiBranchProject)) {
                                         continue;
                                     }
@@ -159,10 +159,9 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                             );
                                         } else {
                                             LOGGER.log(Level.FINER,
-                                                    "Issue comment does not match the trigger build string ({0}) for PR {1}",
-                                                    new Object[] { expectedCommentBody, issueUrl }
+                                                    "Issue comment does not match the trigger build string ({0}) for {1}",
+                                                    new Object[] { expectedCommentBody, job.getFullName() }
                                             );
-                                            return;
                                         }
                                         break;
                                     }
@@ -179,7 +178,6 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                     }
 
                                     jobFound = true;
-                                    break;
                                 }
                             }
                         }
