@@ -8,3 +8,6 @@ work
 bin
 
 *.iml
+
+release.properties
+*.releaseBackup
