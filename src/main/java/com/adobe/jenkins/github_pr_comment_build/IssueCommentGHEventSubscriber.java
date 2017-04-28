@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import com.cloudbees.jenkins.GitHubRepositoryName;
 import hudson.Extension;
 import hudson.model.CauseAction;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.security.ACL;
 import jenkins.branch.BranchProperty;
@@ -52,13 +53,16 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
     private static final String ACTION_EDITED = "edited";
 
     @Override
-    protected boolean isApplicable(Job<?, ?> project) {
-        if (project != null) {
-            if (project.getParent() instanceof SCMSourceOwner) {
-                SCMSourceOwner owner = (SCMSourceOwner) project.getParent();
-                for (SCMSource source : owner.getSCMSources()) {
-                    if (source instanceof GitHubSCMSource) {
-                        return true;
+    protected boolean isApplicable(Item item) {
+        if (item != null && item instanceof Job<?, ?>) {
+            Job<?, ?> project = (Job<?, ?>) item;
+            if (project != null) {
+                if (project.getParent() instanceof SCMSourceOwner) {
+                    SCMSourceOwner owner = (SCMSourceOwner) project.getParent();
+                    for (SCMSource source : owner.getSCMSources()) {
+                        if (source instanceof GitHubSCMSource) {
+                            return true;
+                        }
                     }
                 }
             }
