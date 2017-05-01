@@ -49,13 +49,11 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
     protected boolean isApplicable(Item item) {
         if (item != null && item instanceof Job<?, ?>) {
             Job<?, ?> project = (Job<?, ?>) item;
-            if (project != null) {
-                if (project.getParent() instanceof SCMSourceOwner) {
-                    SCMSourceOwner owner = (SCMSourceOwner) project.getParent();
-                    for (SCMSource source : owner.getSCMSources()) {
-                        if (source instanceof GitHubSCMSource) {
-                            return true;
-                        }
+            if (project.getParent() instanceof SCMSourceOwner) {
+                SCMSourceOwner owner = (SCMSourceOwner) project.getParent();
+                for (SCMSource source : owner.getSCMSources()) {
+                    if (source instanceof GitHubSCMSource) {
+                        return true;
                     }
                 }
             }
