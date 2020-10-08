@@ -1,3 +1,6 @@
+> NOTE: This plugin is incompatible with version 2.177 of Jenkins.
+> Upgrading to 2.260 solves the issue. Please see #24 for more information.
+
 # GitHub Pull Request Comment Build Plugin
 
 This plugin listens for comments on pull requests and will trigger a GitHub multibranch
