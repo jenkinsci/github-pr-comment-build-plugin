@@ -149,7 +149,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
                                         if (commentBody == null || pattern.matcher(commentBody).matches()) {
                                             ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                                    new CauseAction(new GitHubPullRequestCommentCause(commentUrl)));
+                                                    new CauseAction(new GitHubPullRequestCommentCause(commentUrl, commentBody)));
                                             LOGGER.log(Level.FINE,
                                                     "Triggered build for {0} due to PR comment on {1}:{2}/{3}",
                                                     new Object[] {
