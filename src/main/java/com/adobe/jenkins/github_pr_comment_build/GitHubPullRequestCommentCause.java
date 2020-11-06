@@ -12,15 +12,6 @@ public final class GitHubPullRequestCommentCause extends Cause {
     /**
      * Constructor.
      * @param commentUrl the URL for the GitHub comment
-     */
-    public GitHubPullRequestCommentCause(String commentUrl) {
-        this.commentUrl = commentUrl;
-        this.commentBody = "Unknown";
-    }
-
-    /**
-     * Constructor.
-     * @param commentUrl the URL for the GitHub comment
      * @param commentBody the body for the GitHub comment
      */
     public GitHubPullRequestCommentCause(String commentUrl, String commentBody) {
