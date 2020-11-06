@@ -55,4 +55,4 @@ trust pipeline scripts, etc).
 
 ## Releasing new versions
 
-Use the instructions found in [this wiki page](https://wiki.jenkins.io/display/JENKINS/Hosting+Plugins).
+Use the instructions found [in the Jenkins docs](https://www.jenkins.io/doc/developer/publishing/requesting-hosting/).
