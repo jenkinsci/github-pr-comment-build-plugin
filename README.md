@@ -81,4 +81,4 @@ Initial release
 
 ### Releasing new versions
 
-Use the instructions found [in the Jenkins docs](https://www.jenkins.io/doc/developer/publishing/requesting-hosting/).
+Use the instructions found [in the Jenkins docs](https://www.jenkins.io/doc/developer/publishing/releasing/).
