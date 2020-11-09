@@ -3,6 +3,11 @@
 
 # GitHub Pull Request Comment Build Plugin
 
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/github-pr-comment-build.svg)](https://plugins.jenkins.io/github-pr-comment-build)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/github-pr-comment-build.svg?color=blue)](https://plugins.jenkins.io/github-pr-comment-build)
+
+## About this plugin
+
 This plugin listens for comments on pull requests and will trigger a GitHub multibranch
 job if a comment body matches the configured value, such as "rerun the build".
 This is implemented as a branch property on multibranch jobs.
@@ -16,7 +21,7 @@ match against the comment body.
 Please ensure that you have a GitHub server properly connected via the Jenkins configuration,
 or else the plugin will not operate correctly.
 
-## Regular expression matching
+### Regular expression matching
 
 The regex is not surrounded with any markers and uses the
 `Pattern.CASE_INSENSITIVE` and `Pattern.DOTALL` Java flags.
@@ -38,7 +43,7 @@ Commence the rebuilding
 
 If no pattern is provided, `^REBUILD$` is used.
 
-## GitHub organization folders
+### GitHub organization folders
 
 When using the GitHub organization folders approach to creating multibranch
 pipeline jobs, the branch properties may not be edited [according to
@@ -50,9 +55,30 @@ advantage of this plugin is that it may be used from the Job DSL plugin to
 create jobs with this branch property already added (in the case when you don't
 trust pipeline scripts, etc).
 
+## Changelog
 
-# Plugin maintenance
+### 2.2 (November 6, 2020)
 
-## Releasing new versions
+Add GitHub comment body in the cause object when a build is triggered
+(thanks to @jebentier for PR #25).
+
+### 2.0 (June 15, 2017)
+
+Support newer SCM/branch source plugins. Use this release if you are
+using the 2.x releases of the SCM API-related plugins.
+
+### 1.1 (March 6, 2017)
+
+Add support for building a job when a PR title or body is updated as
+well by using a separate branch property.
+
+### 1.0 (January 23, 2017)
+
+Initial release
+
+
+## Plugin maintenance
+
+### Releasing new versions
 
 Use the instructions found [in the Jenkins docs](https://www.jenkins.io/doc/developer/publishing/requesting-hosting/).
