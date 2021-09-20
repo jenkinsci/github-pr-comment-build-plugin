@@ -7,15 +7,18 @@ import hudson.model.Cause;
  */
 public final class GitHubPullRequestCommentCause extends Cause {
     private final String commentUrl;
+    private final String commentAuthor;
     private final String commentBody;
 
     /**
      * Constructor.
      * @param commentUrl the URL for the GitHub comment
+     * @param commentAuthor the author of the GitHub comment
      * @param commentBody the body for the GitHub comment
      */
-    public GitHubPullRequestCommentCause(String commentUrl, String commentBody) {
+    public GitHubPullRequestCommentCause(String commentUrl, String commentAuthor, String commentBody) {
         this.commentUrl = commentUrl;
+        this.commentAuthor = commentAuthor;
         this.commentBody = commentBody;
     }
 
@@ -30,6 +33,14 @@ public final class GitHubPullRequestCommentCause extends Cause {
      */
     public String getCommentUrl() {
         return commentUrl;
+    }
+
+    /**
+     * Retrieves the author of the GitHub comment for this cause.
+     * @return the author of the GitHub comment
+     */
+    public String getCommentAuthor() {
+        return commentAuthor;
     }
 
     /**

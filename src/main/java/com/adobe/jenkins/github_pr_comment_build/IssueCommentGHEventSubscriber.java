@@ -95,6 +95,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
 
         // Verify that the comment body matches the trigger build string
         final String commentBody = json.getJSONObject("comment").getString("body");
+        final String commentAuthor = json.getJSONObject("comment").getJSONObject("user").getString("login");
         final String commentUrl = json.getJSONObject("comment").getString("html_url");
 
         // Make sure the action is edited or created (not deleted)
@@ -149,7 +150,8 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
                                         if (commentBody == null || pattern.matcher(commentBody).matches()) {
                                             ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                                    new CauseAction(new GitHubPullRequestCommentCause(commentUrl, commentBody)));
+                                                    new CauseAction(new GitHubPullRequestCommentCause(
+                                                            commentUrl, commentAuthor, commentBody)));
                                             LOGGER.log(Level.FINE,
                                                     "Triggered build for {0} due to PR comment on {1}:{2}/{3}",
                                                     new Object[] {
