@@ -57,6 +57,11 @@ trust pipeline scripts, etc).
 
 ## Changelog
 
+### 2.3 (September 20, 2021)
+
+Add GitHub comment author in the cause object when a build is triggered.
+Whitelist cause methods for easier use from pipeline scripts.
+
 ### 2.2 (November 6, 2020)
 
 Add GitHub comment body in the cause object when a build is triggered
