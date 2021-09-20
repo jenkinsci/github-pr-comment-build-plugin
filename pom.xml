@@ -8,7 +8,7 @@
         <relativePath />
     </parent>
     <artifactId>github-pr-comment-build</artifactId>
-    <version>2.4-SNAPSHOT</version>
+    <version>${changelist}</version>
     <packaging>hpi</packaging>
     <name>GitHub PR Comment Build Plugin</name>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
@@ -21,6 +21,7 @@
     </licenses>
 
     <properties>
+        <changelist>999999-SNAPSHOT</changelist>
         <jenkins.version>2.176.4</jenkins.version>
         <java.level>8</java.level>
     </properties>
