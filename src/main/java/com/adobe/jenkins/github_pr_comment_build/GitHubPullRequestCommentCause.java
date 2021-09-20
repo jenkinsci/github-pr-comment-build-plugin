@@ -3,10 +3,12 @@ package com.adobe.jenkins.github_pr_comment_build;
 import hudson.model.Cause;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 
+import java.io.Serializable;
+
 /**
  * Created by saville on 10/13/2016.
  */
-public final class GitHubPullRequestCommentCause extends Cause {
+public final class GitHubPullRequestCommentCause extends Cause implements Serializable {
     private final String commentUrl;
     private final String commentAuthor;
     private final String commentBody;
