@@ -57,7 +57,7 @@ trust pipeline scripts, etc).
 
 ## Changelog
 
-### ??? (September 20, 2021)
+### Latest (September 20, 2021)
 
 Use incremental releases from GitHub Actions.
 Add GitHub comment author in the cause object when a build is triggered.
