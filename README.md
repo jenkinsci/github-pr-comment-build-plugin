@@ -59,26 +59,30 @@ trust pipeline scripts, etc).
 
 ### Latest (September 20, 2021)
 
-Use incremental releases from GitHub Actions.
-Add GitHub comment author in the cause object when a build is triggered.
-Whitelist cause methods for easier use from pipeline scripts.
+### Incremental Releases
 
-### 2.2 (November 6, 2020)
+Releases starting with `58.v945be9f1661f` have been moved to incremental
+versioning. See the release history and log on the
+[releases page](https://github.com/jenkinsci/github-pr-comment-build-plugin/releases).
+
+### Older releases
+
+#### 2.2 (November 6, 2020)
 
 Add GitHub comment body in the cause object when a build is triggered
 (thanks to @jebentier for PR #25).
 
-### 2.0 (June 15, 2017)
+#### 2.0 (June 15, 2017)
 
 Support newer SCM/branch source plugins. Use this release if you are
 using the 2.x releases of the SCM API-related plugins.
 
-### 1.1 (March 6, 2017)
+#### 1.1 (March 6, 2017)
 
 Add support for building a job when a PR title or body is updated as
 well by using a separate branch property.
 
-### 1.0 (January 23, 2017)
+#### 1.0 (January 23, 2017)
 
 Initial release
 
