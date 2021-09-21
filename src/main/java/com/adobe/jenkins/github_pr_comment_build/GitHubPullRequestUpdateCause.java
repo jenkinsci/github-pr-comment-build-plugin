@@ -2,6 +2,7 @@ package com.adobe.jenkins.github_pr_comment_build;
 
 import hudson.model.Cause;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
+import org.kohsuke.stapler.export.Exported;
 
 import java.io.Serializable;
 
@@ -30,6 +31,7 @@ public final class GitHubPullRequestUpdateCause extends Cause implements Seriali
      * @return the URL for the GitHub pull request
      */
     @Whitelisted
+    @Exported(visibility = 3)
     public String getPullRequestUrl() {
         return pullRequestUrl;
     }

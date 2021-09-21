@@ -2,6 +2,7 @@ package com.adobe.jenkins.github_pr_comment_build;
 
 import hudson.model.Cause;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
+import org.kohsuke.stapler.export.Exported;
 
 import java.io.Serializable;
 
@@ -36,6 +37,7 @@ public final class GitHubPullRequestCommentCause extends Cause implements Serial
      * @return the URL for the GitHub comment
      */
     @Whitelisted
+    @Exported(visibility = 3)
     public String getCommentUrl() {
         return commentUrl;
     }
@@ -45,6 +47,7 @@ public final class GitHubPullRequestCommentCause extends Cause implements Serial
      * @return the author of the GitHub comment
      */
     @Whitelisted
+    @Exported(visibility = 3)
     public String getCommentAuthor() {
         return commentAuthor;
     }
@@ -54,6 +57,7 @@ public final class GitHubPullRequestCommentCause extends Cause implements Serial
      * @return the body for the GitHub comment
      */
     @Whitelisted
+    @Exported(visibility = 3)
     public String getCommentBody() {
         return commentBody;
     }
