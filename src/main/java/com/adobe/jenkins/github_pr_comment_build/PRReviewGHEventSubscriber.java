@@ -96,6 +96,7 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
             @Override
             public void run() {
                 boolean jobFound = false;
+                topLevel:
                 for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
                     for (SCMSource source : owner.getSCMSources()) {
                         if (!(source instanceof GitHubSCMSource)) {
@@ -118,7 +119,7 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
                                         propFound = true;
                                         ParameterizedJobMixIn.scheduleBuild2(job, 0,
                                                 new CauseAction(new GitHubPullRequestReviewCause(pullRequestUrl)));
-                                        break;
+                                        break topLevel;
                                     }
 
                                     if (!propFound) {

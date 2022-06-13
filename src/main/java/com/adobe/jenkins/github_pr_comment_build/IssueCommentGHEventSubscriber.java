@@ -125,6 +125,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
             @Override
             public void run() {
                 boolean jobFound = false;
+                topLevel:
                 for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
                     for (SCMSource source : owner.getSCMSources()) {
                         if (!(source instanceof GitHubSCMSource)) {
@@ -161,13 +162,14 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                                             changedRepository.getRepositoryName()
                                                     }
                                             );
+                                            break topLevel;
                                         } else {
                                             LOGGER.log(Level.FINER,
                                                     "Issue comment does not match the trigger build string ({0}) for {1}",
                                                     new Object[] { expectedCommentBody, job.getFullName() }
                                             );
+                                            break;
                                         }
-                                        break;
                                     }
 
                                     if (!propFound) {
