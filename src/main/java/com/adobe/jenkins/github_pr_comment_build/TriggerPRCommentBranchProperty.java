@@ -16,14 +16,16 @@ public class TriggerPRCommentBranchProperty extends BranchProperty {
      * The comment body to trigger a new build on.
      */
     private final String commentBody;
+    private final boolean allowUntrusted;
 
     /**
      * Constructor.
      * @param commentBody the comment body to trigger a new build on
      */
     @DataBoundConstructor
-    public TriggerPRCommentBranchProperty(String commentBody) {
+    public TriggerPRCommentBranchProperty(String commentBody, boolean allowUntrusted) {
         this.commentBody = commentBody;
+        this.allowUntrusted = allowUntrusted;
     }
 
     /**
@@ -35,6 +37,10 @@ public class TriggerPRCommentBranchProperty extends BranchProperty {
             return "^REBUILD$";
         }
         return commentBody;
+    }
+
+    public boolean isAllowUntrusted() {
+        return allowUntrusted;
     }
 
     @Override

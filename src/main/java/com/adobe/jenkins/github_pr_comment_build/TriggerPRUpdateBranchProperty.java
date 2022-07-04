@@ -12,12 +12,19 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * Allows a GitHub pull request update to trigger an immediate build.
  */
 public class TriggerPRUpdateBranchProperty extends BranchProperty {
+    private final boolean allowUntrusted;
 
     /**
      * Constructor.
      */
     @DataBoundConstructor
-    public TriggerPRUpdateBranchProperty() { }
+    public TriggerPRUpdateBranchProperty(boolean allowUntrusted) {
+        this.allowUntrusted = allowUntrusted;
+    }
+
+    public boolean isAllowUntrusted() {
+        return allowUntrusted;
+    }
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {

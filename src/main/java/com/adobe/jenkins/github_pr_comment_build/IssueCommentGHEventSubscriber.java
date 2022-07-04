@@ -146,7 +146,11 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                             continue;
                                         }
                                         propFound = true;
-                                        String expectedCommentBody = ((TriggerPRCommentBranchProperty) prop).getCommentBody();
+                                        TriggerPRCommentBranchProperty branchProp = (TriggerPRCommentBranchProperty)prop;
+                                        String expectedCommentBody = branchProp.getCommentBody();
+                                        if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, commentAuthor)) {
+                                            continue;
+                                        }
                                         Pattern pattern = Pattern.compile(expectedCommentBody,
                                                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
                                         if (commentBody == null || pattern.matcher(commentBody).matches()) {

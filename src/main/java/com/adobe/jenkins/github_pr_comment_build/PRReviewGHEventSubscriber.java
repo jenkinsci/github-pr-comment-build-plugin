@@ -73,6 +73,8 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
         JSONObject pullRequest = json.getJSONObject("pull_request");
         final String pullRequestUrl = pullRequest.getString("html_url");
         Integer pullRequestId = pullRequest.getInt("number");
+        String author = json.getJSONObject("sender").getString("login");
+        LOGGER.fine(() -> String.format("PR Review Author: %s", author));
 
         // Set some values used below
         final Pattern pullRequestJobNamePattern = Pattern.compile("^PR-" + pullRequestId + "\\b.*$",
@@ -114,6 +116,10 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
                                     for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
                                             getBranch(job).getProperties()) {
                                         if (!(prop instanceof TriggerPRReviewBranchProperty)) {
+                                            continue;
+                                        }
+                                        TriggerPRReviewBranchProperty branchProp = (TriggerPRReviewBranchProperty)prop;
+                                        if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, author)) {
                                             continue;
                                         }
                                         propFound = true;
