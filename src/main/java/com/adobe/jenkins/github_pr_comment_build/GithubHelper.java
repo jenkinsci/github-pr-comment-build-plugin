@@ -31,14 +31,20 @@ public class GithubHelper {
     }
 
     public static boolean isAuthorized(final Job<?, ?> job, final String author) {
-        boolean authorized = getCollaborators(job)
-                .stream()
-                .filter(author::equals)
-                .findAny()
-                .map(a -> Boolean.TRUE)
-                .orElse(Boolean.FALSE);
-        LOG.debug("User {} autorized: {}", author, authorized);
-        return authorized;
+        GitHubClient client = getGitHubClient(job);
+        RepositoryId repository = getRepositoryId(job);
+        CollaboratorService collaboratorService = new CollaboratorService(client);
+
+        try {
+            boolean authorized = collaboratorService.isCollaborator(repository, author);
+            LOG.debug("User {} autorized: {}", author, authorized);
+            return authorized;
+
+        } catch (final IOException e) {
+            LOG.debug("Received an exception while trying to check if user {} is a collaborator of repository: {}",
+                    author, repository, e);
+            return false;
+        }
     }
 
     public static List<String> getCollaborators(@Nonnull final Job<?, ?> job) {
