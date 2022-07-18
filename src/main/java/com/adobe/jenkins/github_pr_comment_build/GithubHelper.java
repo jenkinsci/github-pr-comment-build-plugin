@@ -5,13 +5,9 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import hudson.model.Job;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMSource;
 import org.eclipse.egit.github.core.RepositoryId;
-import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.service.CollaboratorService;
 import org.jenkinsci.plugins.github_branch_source.Connector;
@@ -37,30 +33,13 @@ public class GithubHelper {
 
         try {
             boolean authorized = collaboratorService.isCollaborator(repository, author);
-            LOG.debug("User {} autorized: {}", author, authorized);
+            LOG.debug("User {} authorized: {}", author, authorized);
             return authorized;
-
         } catch (final IOException e) {
             LOG.debug("Received an exception while trying to check if user {} is a collaborator of repository: {}",
-                    author, repository, e);
+                    author, repository);
+            LOG.debug("isAuthorized() - Exception", e);
             return false;
-        }
-    }
-
-    public static List<String> getCollaborators(@Nonnull final Job<?, ?> job) {
-        GitHubClient client = getGitHubClient(job);
-        RepositoryId repository = getRepositoryId(job);
-        CollaboratorService collaboratorService = new CollaboratorService(client);
-
-        try {
-            return collaboratorService.getCollaborators(repository)
-                    .stream()
-                    .map(User::getLogin)
-                    .collect(Collectors.toList());
-        } catch (final IOException e) {
-            LOG.debug("Received an exception while trying to retrieve the collaborators for the repository: {}",
-                    repository, e);
-            return Collections.emptyList();
         }
     }
 
