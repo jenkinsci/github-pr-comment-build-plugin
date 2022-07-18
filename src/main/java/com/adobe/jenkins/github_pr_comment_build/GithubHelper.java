@@ -1,17 +1,14 @@
 package com.adobe.jenkins.github_pr_comment_build;
 
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import hudson.model.Job;
 import java.io.IOException;
-import java.net.URI;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMSource;
-import org.eclipse.egit.github.core.RepositoryId;
-import org.eclipse.egit.github.core.client.GitHubClient;
-import org.eclipse.egit.github.core.service.CollaboratorService;
 import org.jenkinsci.plugins.github_branch_source.Connector;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
+import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GitHub;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -27,55 +24,28 @@ public class GithubHelper {
     }
 
     public static boolean isAuthorized(final Job<?, ?> job, final String author) {
-        GitHubClient client = getGitHubClient(job);
-        RepositoryId repository = getRepositoryId(job);
-        CollaboratorService collaboratorService = new CollaboratorService(client);
-
         try {
-            boolean authorized = collaboratorService.isCollaborator(repository, author);
+            GHRepository ghRepository = getGHRepository(job);
+            boolean authorized = ghRepository.getCollaboratorNames().contains(author);
             LOG.debug("User {} authorized: {}", author, authorized);
             return authorized;
         } catch (final IOException e) {
-            LOG.debug("Received an exception while trying to check if user {} is a collaborator of repository: {}",
-                    author, repository);
+            LOG.debug("Received an exception while trying to check if user {} is a collaborator for repo of job {}",
+                    author, job.getFullName());
             LOG.debug("isAuthorized() - Exception", e);
             return false;
         }
     }
 
-    public static GitHubClient getGitHubClient(@Nonnull final Job<?, ?> job) {
+    private static GHRepository getGHRepository(@Nonnull final Job<?, ?> job) throws IOException {
         SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
         if (scmSource instanceof GitHubSCMSource) {
             GitHubSCMSource gitHubSource = (GitHubSCMSource) scmSource;
-
-            URI uri = URI.create(gitHubSource.getApiUri());
-            GitHubClient client = new GitHubClient(uri.getHost(), uri.getPort(), uri.getScheme());
-
-            // configure credentials
-            if (gitHubSource.getCredentialsId() != null) {
-                StandardCredentials credentials = Connector.lookupScanCredentials(
-                        job, gitHubSource.getApiUri(), gitHubSource.getCredentialsId());
-
-                if (credentials instanceof StandardUsernamePasswordCredentials) {
-                    StandardUsernamePasswordCredentials c = (StandardUsernamePasswordCredentials) credentials;
-                    String userName = c.getUsername();
-                    String password = c.getPassword().getPlainText();
-                    client.setCredentials(userName, password);
-                }
-            }
-            return client;
+            StandardCredentials credentials = Connector.lookupScanCredentials(
+                    job, gitHubSource.getApiUri(), gitHubSource.getCredentialsId());
+            GitHub github = Connector.connect(gitHubSource.getApiUri(), credentials);
+            return github.getRepository(gitHubSource.getRepoOwner() + "/" + gitHubSource.getRepository());
         }
         throw new IllegalArgumentException("Job's SCM is not GitHub.");
-    }
-
-    public static RepositoryId getRepositoryId(@Nonnull final Job<?, ?> job) {
-        SCMSource src = SCMSource.SourceByItem.findSource(job);
-        if (src instanceof GitHubSCMSource) {
-            GitHubSCMSource source = (GitHubSCMSource) src;
-            if (source.getCredentialsId() != null) {
-                return RepositoryId.create(source.getRepoOwner(), source.getRepository());
-            }
-        }
-        return null;
     }
 }
