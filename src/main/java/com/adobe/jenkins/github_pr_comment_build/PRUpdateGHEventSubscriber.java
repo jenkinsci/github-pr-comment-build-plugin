@@ -24,7 +24,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.collect.Sets.immutableEnumSet;
-import static org.kohsuke.github.GHEvent.ISSUE_COMMENT;
 import static org.kohsuke.github.GHEvent.PULL_REQUEST;
 
 /**
@@ -80,6 +79,8 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
         JSONObject pullRequest = json.getJSONObject("pull_request");
         final String pullRequestUrl = pullRequest.getString("html_url");
         Integer pullRequestId = pullRequest.getInt("number");
+        String author = json.getJSONObject("sender").getString("login");
+        LOGGER.fine(() -> String.format("PR Update Author: %s", author));
 
         // Make sure the action is edited
         String action = json.getString("action");
@@ -130,6 +131,10 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
                                     for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
                                             getBranch(job).getProperties()) {
                                         if (!(prop instanceof TriggerPRUpdateBranchProperty)) {
+                                            continue;
+                                        }
+                                        TriggerPRUpdateBranchProperty branchProp = (TriggerPRUpdateBranchProperty)prop;
+                                        if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, author)) {
                                             continue;
                                         }
                                         propFound = true;

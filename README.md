@@ -43,6 +43,13 @@ Commence the rebuilding
 
 If no pattern is provided, `^REBUILD$` is used.
 
+### Untrusted Builds
+This plugin only triggers builds from trusted users.
+This is an incompatible change since July 2022 releases of the plugin.
+If you would like untrusted users to be able to trigger builds,
+check the "Allow Untrusted Users" checkbox. Use this feature with caution because
+it may open up security issues with your Jenkins infrastructure.
+
 ### GitHub organization folders
 
 When using the GitHub organization folders approach to creating multibranch

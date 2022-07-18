@@ -7,17 +7,28 @@ import jenkins.branch.BranchProperty;
 import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Allows a GitHub pull request update to trigger an immediate build.
  */
 public class TriggerPRReviewBranchProperty extends BranchProperty {
+    private boolean allowUntrusted;
 
     /**
      * Constructor.
      */
     @DataBoundConstructor
     public TriggerPRReviewBranchProperty() { }
+
+    public boolean isAllowUntrusted() {
+        return allowUntrusted;
+    }
+
+    @DataBoundSetter
+    public void setAllowUntrusted(boolean allowUntrusted) {
+        this.allowUntrusted = allowUntrusted;
+    }
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {

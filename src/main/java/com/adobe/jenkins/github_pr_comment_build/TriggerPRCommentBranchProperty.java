@@ -7,6 +7,7 @@ import jenkins.branch.BranchProperty;
 import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Allows a GitHub pull request comment to trigger an immediate build based on a comment string.
@@ -16,6 +17,7 @@ public class TriggerPRCommentBranchProperty extends BranchProperty {
      * The comment body to trigger a new build on.
      */
     private final String commentBody;
+    private boolean allowUntrusted;
 
     /**
      * Constructor.
@@ -35,6 +37,15 @@ public class TriggerPRCommentBranchProperty extends BranchProperty {
             return "^REBUILD$";
         }
         return commentBody;
+    }
+
+    public boolean isAllowUntrusted() {
+        return allowUntrusted;
+    }
+
+    @DataBoundSetter
+    public void setAllowUntrusted(boolean allowUntrusted) {
+        this.allowUntrusted = allowUntrusted;
     }
 
     @Override
