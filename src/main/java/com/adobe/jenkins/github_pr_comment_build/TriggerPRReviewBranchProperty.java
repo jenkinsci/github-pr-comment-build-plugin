@@ -26,7 +26,7 @@ public class TriggerPRReviewBranchProperty extends BranchProperty {
     }
 
     @DataBoundSetter
-    public void setAlowUntrusted(boolean allowUntrusted) {
+    public void setAllowUntrusted(boolean allowUntrusted) {
         this.allowUntrusted = allowUntrusted;
     }
 
