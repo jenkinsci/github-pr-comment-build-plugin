@@ -14,6 +14,7 @@ import org.kohsuke.stapler.DataBoundSetter;
  */
 public class TriggerPRReviewBranchProperty extends BranchProperty {
     private boolean allowUntrusted;
+    private boolean allowMultiple;
 
     /**
      * Constructor.
@@ -28,6 +29,15 @@ public class TriggerPRReviewBranchProperty extends BranchProperty {
     @DataBoundSetter
     public void setAllowUntrusted(boolean allowUntrusted) {
         this.allowUntrusted = allowUntrusted;
+    }
+
+    public boolean isAllowMultiple() {
+        return allowMultiple;
+    }
+
+    @DataBoundSetter
+    public void setAllowMultiple(boolean allowMultiple) {
+        this.allowMultiple = allowMultiple;
     }
 
     @Override

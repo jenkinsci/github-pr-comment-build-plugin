@@ -166,7 +166,11 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                                             changedRepository.getRepositoryName()
                                                     }
                                             );
-                                            break topLevel;
+                                            if (branchProp.isAllowMultiple()) {
+                                                break;
+                                            } else {
+                                                break topLevel;
+                                            }
                                         } else {
                                             LOGGER.log(Level.FINER,
                                                     "Issue comment does not match the trigger build string ({0}) for {1}",

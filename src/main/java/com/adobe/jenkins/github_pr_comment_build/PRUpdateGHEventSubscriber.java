@@ -140,7 +140,11 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
                                         propFound = true;
                                         ParameterizedJobMixIn.scheduleBuild2(job, 0,
                                                 new CauseAction(new GitHubPullRequestUpdateCause(pullRequestUrl)));
-                                        break topLevel;
+                                        if (branchProp.isAllowMultiple()) {
+                                            break;
+                                        } else {
+                                            break topLevel;
+                                        }
                                     }
 
                                     if (!propFound) {
