@@ -24,6 +24,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.collect.Sets.immutableEnumSet;
+import static hudson.security.ACL.as;
+import hudson.security.ACLContext;
 import java.util.HashSet;
 import static org.kohsuke.github.GHEvent.PULL_REQUEST;
 
@@ -110,71 +112,68 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
         }
 
         LOGGER.log(Level.FINE, "Received update on PR {1} for {2}", new Object[] { pullRequestId, repoUrl });
-        ACL.impersonate(ACL.SYSTEM, new Runnable() {
-            @Override
-            public void run() {
-                boolean jobFound = false;
-                Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
-                for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
-                    for (SCMSource source : owner.getSCMSources()) {
-                        if (!(source instanceof GitHubSCMSource)) {
-                            continue;
-                        }
-                        GitHubSCMSource gitHubSCMSource = (GitHubSCMSource) source;
-                        if (gitHubSCMSource.getRepoOwner().equalsIgnoreCase(changedRepository.getUserName()) &&
-                                gitHubSCMSource.getRepository().equalsIgnoreCase(changedRepository.getRepositoryName())) {
-                            for (Job<?, ?> job : owner.getAllJobs()) {
-                                if (pullRequestJobNamePattern.matcher(job.getName()).matches()) {
-                                    if (!(job.getParent() instanceof MultiBranchProject)) {
+        try (ACLContext aclContext = as(ACL.SYSTEM)) {
+            boolean jobFound = false;
+            Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
+            for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
+                for (SCMSource source : owner.getSCMSources()) {
+                    if (!(source instanceof GitHubSCMSource)) {
+                        continue;
+                    }
+                    GitHubSCMSource gitHubSCMSource = (GitHubSCMSource) source;
+                    if (gitHubSCMSource.getRepoOwner().equalsIgnoreCase(changedRepository.getUserName()) &&
+                            gitHubSCMSource.getRepository().equalsIgnoreCase(changedRepository.getRepositoryName())) {
+                        for (Job<?, ?> job : owner.getAllJobs()) {
+                            if (pullRequestJobNamePattern.matcher(job.getName()).matches()) {
+                                if (!(job.getParent() instanceof MultiBranchProject)) {
+                                    continue;
+                                }
+                                boolean propFound = false;
+                                for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
+                                        getBranch(job).getProperties()) {
+                                    if (!(prop instanceof TriggerPRUpdateBranchProperty)) {
                                         continue;
                                     }
-                                    boolean propFound = false;
-                                    for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
-                                            getBranch(job).getProperties()) {
-                                        if (!(prop instanceof TriggerPRUpdateBranchProperty)) {
-                                            continue;
-                                        }
-                                        TriggerPRUpdateBranchProperty branchProp = (TriggerPRUpdateBranchProperty)prop;
-                                        if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, author)) {
-                                            continue;
-                                        }
-                                        propFound = true;
-                                        if (alreadyTriggeredJobs.add(job)) {
-                                            ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                                    new CauseAction(new GitHubPullRequestUpdateCause(pullRequestUrl)));
-                                        } else {
-                                            LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[]{job});
-                                        }
-                                        break;
+                                    TriggerPRUpdateBranchProperty branchProp = (TriggerPRUpdateBranchProperty)prop;
+                                    if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, author)) {
+                                        continue;
                                     }
-
-                                    if (!propFound) {
-                                        LOGGER.log(Level.FINE,
-                                                "Job {0} for {1}:{2}/{3} does not have a trigger PR update branch property",
-                                                new Object[] {
-                                                        job.getFullName(),
-                                                        changedRepository.getHost(),
-                                                        changedRepository.getUserName(),
-                                                        changedRepository.getRepositoryName()
-                                                }
-                                        );
+                                    propFound = true;
+                                    if (alreadyTriggeredJobs.add(job)) {
+                                        ParameterizedJobMixIn.scheduleBuild2(job, 0,
+                                                new CauseAction(new GitHubPullRequestUpdateCause(pullRequestUrl)));
+                                    } else {
+                                        LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[]{job});
                                     }
-
-                                    jobFound = true;
+                                    break;
                                 }
+
+                                if (!propFound) {
+                                    LOGGER.log(Level.FINE,
+                                            "Job {0} for {1}:{2}/{3} does not have a trigger PR update branch property",
+                                            new Object[] {
+                                                job.getFullName(),
+                                                changedRepository.getHost(),
+                                                changedRepository.getUserName(),
+                                                changedRepository.getRepositoryName()
+                                            }
+                                    );
+                                }
+
+                                jobFound = true;
                             }
                         }
                     }
                 }
-                if (!jobFound) {
-                    LOGGER.log(Level.FINE, "PR update on {0}:{1}/{2} did not match any job",
-                            new Object[] {
-                                    changedRepository.getHost(), changedRepository.getUserName(),
-                                    changedRepository.getRepositoryName()
-                            }
-                    );
-                }
             }
-        });
+            if (!jobFound) {
+                LOGGER.log(Level.FINE, "PR update on {0}:{1}/{2} did not match any job",
+                        new Object[] {
+                            changedRepository.getHost(), changedRepository.getUserName(),
+                            changedRepository.getRepositoryName()
+                        }
+                );
+            }
+        }
     }
 }
