@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.collect.Sets.immutableEnumSet;
+import java.util.HashSet;
 import static org.kohsuke.github.GHEvent.PULL_REQUEST_REVIEW;
 
 /**
@@ -98,6 +99,7 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
             @Override
             public void run() {
                 boolean jobFound = false;
+                Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
                 for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
                     for (SCMSource source : owner.getSCMSources()) {
                         if (!(source instanceof GitHubSCMSource)) {
@@ -122,8 +124,12 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
                                             continue;
                                         }
                                         propFound = true;
-                                        ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                                new CauseAction(new GitHubPullRequestReviewCause(pullRequestUrl)));
+                                        if (alreadyTriggeredJobs.add(job)) {
+                                            ParameterizedJobMixIn.scheduleBuild2(job, 0,
+                                                    new CauseAction(new GitHubPullRequestReviewCause(pullRequestUrl)));
+                                        } else {
+                                            LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
+                                        }
                                         break;
                                     }
 

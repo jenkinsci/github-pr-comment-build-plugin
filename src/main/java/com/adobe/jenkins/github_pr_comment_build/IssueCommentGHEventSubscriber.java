@@ -24,6 +24,7 @@ import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
 import org.kohsuke.github.GHEvent;
 
 import static com.google.common.collect.Sets.immutableEnumSet;
+import java.util.HashSet;
 import static org.kohsuke.github.GHEvent.ISSUE_COMMENT;
 
 /**
@@ -125,6 +126,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
             @Override
             public void run() {
                 boolean jobFound = false;
+                Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
                 for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
                     for (SCMSource source : owner.getSCMSources()) {
                         if (!(source instanceof GitHubSCMSource)) {
@@ -153,18 +155,22 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                         Pattern pattern = Pattern.compile(expectedCommentBody,
                                                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
                                         if (commentBody == null || pattern.matcher(commentBody).matches()) {
-                                            ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                                    new CauseAction(new GitHubPullRequestCommentCause(
-                                                            commentUrl, commentAuthor, commentBody)));
-                                            LOGGER.log(Level.FINE,
-                                                    "Triggered build for {0} due to PR comment on {1}:{2}/{3}",
-                                                    new Object[] {
+                                            if (alreadyTriggeredJobs.add(job)) {
+                                                ParameterizedJobMixIn.scheduleBuild2(job, 0,
+                                                        new CauseAction(new GitHubPullRequestCommentCause(
+                                                                commentUrl, commentAuthor, commentBody)));
+                                                LOGGER.log(Level.FINE,
+                                                        "Triggered build for {0} due to PR comment on {1}:{2}/{3}",
+                                                            new Object[] {
                                                             job.getFullName(),
                                                             changedRepository.getHost(),
                                                             changedRepository.getUserName(),
                                                             changedRepository.getRepositoryName()
-                                                    }
-                                            );
+                                                        }
+                                                );
+                                            } else {
+                                                LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
+                                            }
                                         } else {
                                             LOGGER.log(Level.FINER,
                                                     "Issue comment does not match the trigger build string ({0}) for {1}",
