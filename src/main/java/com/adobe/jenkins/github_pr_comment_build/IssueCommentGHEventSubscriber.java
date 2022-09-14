@@ -24,6 +24,9 @@ import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
 import org.kohsuke.github.GHEvent;
 
 import static com.google.common.collect.Sets.immutableEnumSet;
+import static hudson.security.ACL.as;
+import hudson.security.ACLContext;
+import java.util.HashSet;
 import static org.kohsuke.github.GHEvent.ISSUE_COMMENT;
 
 /**
@@ -121,88 +124,88 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
         }
 
         LOGGER.log(Level.FINE, "Received comment on PR {0} for {1}", new Object[] { pullRequestId, repoUrl });
-        ACL.impersonate(ACL.SYSTEM, new Runnable() {
-            @Override
-            public void run() {
-                boolean jobFound = false;
-                topLevel:
-                for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
-                    for (SCMSource source : owner.getSCMSources()) {
-                        if (!(source instanceof GitHubSCMSource)) {
-                            continue;
-                        }
-                        GitHubSCMSource gitHubSCMSource = (GitHubSCMSource) source;
-                        if (gitHubSCMSource.getRepoOwner().equalsIgnoreCase(changedRepository.getUserName()) &&
-                                gitHubSCMSource.getRepository().equalsIgnoreCase(changedRepository.getRepositoryName())) {
-                            for (Job<?, ?> job : owner.getAllJobs()) {
-                                if (pullRequestJobNamePattern.matcher(job.getName()).matches()) {
-                                    if (!(job.getParent() instanceof MultiBranchProject)) {
+        try (ACLContext aclContext = as(ACL.SYSTEM)) {
+            boolean jobFound = false;
+            Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
+            for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
+                for (SCMSource source : owner.getSCMSources()) {
+                    if (!(source instanceof GitHubSCMSource)) {
+                        continue;
+                    }
+                    GitHubSCMSource gitHubSCMSource = (GitHubSCMSource) source;
+                    if (gitHubSCMSource.getRepoOwner().equalsIgnoreCase(changedRepository.getUserName()) &&
+                            gitHubSCMSource.getRepository().equalsIgnoreCase(changedRepository.getRepositoryName())) {
+                        for (Job<?, ?> job : owner.getAllJobs()) {
+                            if (pullRequestJobNamePattern.matcher(job.getName()).matches()) {
+                                if (!(job.getParent() instanceof MultiBranchProject)) {
+                                    continue;
+                                }
+                                boolean propFound = false;
+                                for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
+                                        getBranch(job).getProperties()) {
+                                    if (!(prop instanceof TriggerPRCommentBranchProperty)) {
                                         continue;
                                     }
-                                    boolean propFound = false;
-                                    for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
-                                            getBranch(job).getProperties()) {
-                                        if (!(prop instanceof TriggerPRCommentBranchProperty)) {
-                                            continue;
-                                        }
-                                        propFound = true;
-                                        TriggerPRCommentBranchProperty branchProp = (TriggerPRCommentBranchProperty)prop;
-                                        String expectedCommentBody = branchProp.getCommentBody();
-                                        if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, commentAuthor)) {
-                                            continue;
-                                        }
-                                        Pattern pattern = Pattern.compile(expectedCommentBody,
-                                                Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                                        if (commentBody == null || pattern.matcher(commentBody).matches()) {
+                                    propFound = true;
+                                    TriggerPRCommentBranchProperty branchProp = (TriggerPRCommentBranchProperty)prop;
+                                    String expectedCommentBody = branchProp.getCommentBody();
+                                    if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, commentAuthor)) {
+                                        continue;
+                                    }
+                                    Pattern pattern = Pattern.compile(expectedCommentBody,
+                                            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+                                    if (commentBody == null || pattern.matcher(commentBody).matches()) {
+                                        if (alreadyTriggeredJobs.add(job)) {
                                             ParameterizedJobMixIn.scheduleBuild2(job, 0,
                                                     new CauseAction(new GitHubPullRequestCommentCause(
                                                             commentUrl, commentAuthor, commentBody)));
                                             LOGGER.log(Level.FINE,
                                                     "Triggered build for {0} due to PR comment on {1}:{2}/{3}",
                                                     new Object[] {
-                                                            job.getFullName(),
-                                                            changedRepository.getHost(),
-                                                            changedRepository.getUserName(),
-                                                            changedRepository.getRepositoryName()
-                                                    }
-                                            );
-                                            break topLevel;
-                                        } else {
-                                            LOGGER.log(Level.FINER,
-                                                    "Issue comment does not match the trigger build string ({0}) for {1}",
-                                                    new Object[] { expectedCommentBody, job.getFullName() }
-                                            );
-                                            break;
-                                        }
-                                    }
-
-                                    if (!propFound) {
-                                        LOGGER.log(Level.FINE,
-                                                "Job {0} for {1}:{2}/{3} does not have a trigger PR comment branch property",
-                                                new Object[] {
                                                         job.getFullName(),
                                                         changedRepository.getHost(),
                                                         changedRepository.getUserName(),
                                                         changedRepository.getRepositoryName()
-                                                }
+                                                    }
+                                            );
+                                        } else {
+                                            LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
+                                        }
+                                    } else {
+                                        LOGGER.log(Level.FINER,
+                                                "Issue comment does not match the trigger build string ({0}) for {1}",
+                                                new Object[] { expectedCommentBody, job.getFullName() }
                                         );
                                     }
-
-                                    jobFound = true;
+                                    break;
                                 }
+
+                                if (!propFound) {
+                                    LOGGER.log(Level.FINE,
+                                            "Job {0} for {1}:{2}/{3} does not have a trigger PR comment branch property",
+                                            new Object[] {
+                                                job.getFullName(),
+                                                changedRepository.getHost(),
+                                                changedRepository.getUserName(),
+                                                changedRepository.getRepositoryName()
+                                            }
+                                    );
+                                }
+
+                                jobFound = true;
                             }
                         }
                     }
                 }
-                if (!jobFound) {
-                    LOGGER.log(Level.FINE, "PR comment on {0}:{1}/{2} did not match any job",
-                            new Object[] {
-                                    changedRepository.getHost(), changedRepository.getUserName(),
-                                    changedRepository.getRepositoryName()
-                            }
-                    );
-                }
             }
-        });
+            if (!jobFound) {
+                LOGGER.log(Level.FINE, "PR comment on {0}:{1}/{2} did not match any job",
+                        new Object[] {
+                            changedRepository.getHost(), changedRepository.getUserName(),
+                            changedRepository.getRepositoryName()
+                        }
+                );
+            }
+        }
     }
 }
