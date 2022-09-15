@@ -29,7 +29,7 @@ public class GithubHelper {
             boolean authorized = ghRepository.getCollaboratorNames().contains(author);
             LOG.debug("User {} authorized: {}", author, authorized);
             return authorized;
-        } catch (final IOException e) {
+        } catch (final IOException | IllegalArgumentException e) {
             LOG.debug("Received an exception while trying to check if user {} is a collaborator for repo of job {}",
                     author, job.getFullName());
             LOG.debug("isAuthorized() - Exception", e);
