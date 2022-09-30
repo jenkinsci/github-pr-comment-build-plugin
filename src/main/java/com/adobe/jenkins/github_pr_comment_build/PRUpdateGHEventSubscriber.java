@@ -111,7 +111,7 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
             return;
         }
 
-        LOGGER.log(Level.FINE, "Received update on PR {1} for {2}", new Object[] { pullRequestId, repoUrl });
+        LOGGER.log(Level.FINE, "Received update on PR {0} for {1}", new Object[] { pullRequestId, repoUrl });
         try (ACLContext aclContext = as(ACL.SYSTEM)) {
             boolean jobFound = false;
             Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
