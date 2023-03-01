@@ -194,6 +194,12 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
 
                                 jobFound = true;
                             }
+                            else { // failed to match 'pullRequestJobNamePattern'
+                                LOGGER.log(Level.FINE,
+                                        "Skipping job [{0}] as it does not match the 'PR-' pattern." +
+                                                "If this is unexpected, make sure the job is configured with a 'discover pull requests...' behavior (see README)",
+                                        new Object[] { job.getName() });
+                            }
                         }
                     }
                 }

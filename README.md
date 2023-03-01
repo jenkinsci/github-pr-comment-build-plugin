@@ -12,7 +12,12 @@ This plugin listens for comments on pull requests and will trigger a GitHub mult
 job if a comment body matches the configured value, such as "rerun the build".
 This is implemented as a branch property on multibranch jobs.
 
-To enable this behavior, simply add one or more of the branch properties from
+### Setup
+For the plugin to work your multibranch job must use one of the "Discover pull requests from..." behaviors.
+For example:
+![GitHub Multibranch PR Behavior](docs/pull-request-behavior.png)
+
+To enable the plugin's functionality, simply add one or more of the branch properties from
 this plugin to the multibranch job and configure the regular expression to
 match against the comment body.
 
