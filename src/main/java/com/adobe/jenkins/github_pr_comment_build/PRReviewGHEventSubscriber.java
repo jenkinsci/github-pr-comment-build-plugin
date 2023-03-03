@@ -120,7 +120,7 @@ public class PRReviewGHEventSubscriber extends GHEventsSubscriber {
                                         continue;
                                     }
                                     TriggerPRReviewBranchProperty branchProp = (TriggerPRReviewBranchProperty)prop;
-                                    if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, author)) {
+                                    if (!GithubHelper.isAuthorized(job, author, branchProp.getMinimumPermissions())) {
                                         continue;
                                     }
                                     propFound = true;

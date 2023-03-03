@@ -1,47 +1,25 @@
 package com.adobe.jenkins.github_pr_comment_build;
 
 import hudson.Extension;
-import hudson.model.Job;
-import hudson.model.Run;
-import jenkins.branch.BranchProperty;
-import jenkins.branch.BranchPropertyDescriptor;
-import jenkins.branch.JobDecorator;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Allows a GitHub pull request update to trigger an immediate build.
  */
-public class TriggerPRUpdateBranchProperty extends BranchProperty {
-    private boolean allowUntrusted;
+public class TriggerPRUpdateBranchProperty extends TriggerBranchProperty {
 
     /**
      * Constructor.
      */
     @DataBoundConstructor
-    public TriggerPRUpdateBranchProperty() { }
-
-    public boolean isAllowUntrusted() {
-        return allowUntrusted;
-    }
-
-    @DataBoundSetter
-    public void setAllowUntrusted(boolean allowUntrusted) {
-        this.allowUntrusted = allowUntrusted;
-    }
-
-    @Override
-    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
-        return null;
-    }
+    public TriggerPRUpdateBranchProperty() {}
 
     @Extension
-    public static class DescriptorImpl extends BranchPropertyDescriptor {
+    public static class DescriptorImpl extends TriggerBranchPropertyDescriptorImpl {
 
         @Override
         public String getDisplayName() {
             return Messages.TriggerPRUpdateBranchProperty_trigger_on_pull_request_update();
         }
-
     }
 }
