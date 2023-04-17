@@ -135,7 +135,7 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
                                         continue;
                                     }
                                     TriggerPRUpdateBranchProperty branchProp = (TriggerPRUpdateBranchProperty)prop;
-                                    if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, author)) {
+                                    if (!GithubHelper.isAuthorized(job, author, branchProp.getMinimumPermissions())) {
                                         continue;
                                     }
                                     propFound = true;

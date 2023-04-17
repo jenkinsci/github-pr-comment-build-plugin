@@ -5,7 +5,7 @@
     <f:entry title="Comment Body" field="commentBody">
         <f:textbox />
     </f:entry>
-    <f:entry title="Allow untrusted users to trigger the build" field="allowUntrusted">
-        <f:checkbox default="false"/>
+    <f:entry field="minimumPermissions" title="Minimum Permissions on repository to trigger the build">
+        <f:select default="WRITE" />
     </f:entry>
 </j:jelly>

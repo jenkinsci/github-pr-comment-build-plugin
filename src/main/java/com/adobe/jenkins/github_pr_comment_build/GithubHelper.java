@@ -7,6 +7,7 @@ import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMSource;
 import org.jenkinsci.plugins.github_branch_source.Connector;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
+import org.kohsuke.github.GHPermissionType;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.slf4j.LoggerFactory;
@@ -23,10 +24,28 @@ public class GithubHelper {
         // private
     }
 
-    public static boolean isAuthorized(final Job<?, ?> job, final String author) {
+    public static boolean isAuthorized(final Job<?, ?> job, final String author, String minimumPermissions) {
         try {
             GHRepository ghRepository = getGHRepository(job);
-            boolean authorized = ghRepository.getCollaboratorNames().contains(author);
+            GHPermissionType authorPermissions = ghRepository.getPermission(author);
+            boolean authorized = false;
+            switch (GHPermissionType.valueOf(minimumPermissions)) {
+                case NONE:
+                    authorized = true;
+                    break;
+                default: // break intentionally omitted
+                case WRITE:
+                    if(authorPermissions == GHPermissionType.WRITE || authorPermissions == GHPermissionType.ADMIN) {
+                        authorized = true;
+                    }
+                    break;
+                case ADMIN:
+                    if(authorPermissions == GHPermissionType.ADMIN) {
+                        authorized = true;
+                    }
+                    break;
+            }
+
             LOG.debug("User {} authorized: {}", author, authorized);
             return authorized;
         } catch (final IOException | IllegalArgumentException e) {

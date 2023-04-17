@@ -149,7 +149,7 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                     propFound = true;
                                     TriggerPRCommentBranchProperty branchProp = (TriggerPRCommentBranchProperty)prop;
                                     String expectedCommentBody = branchProp.getCommentBody();
-                                    if (!branchProp.isAllowUntrusted() && !GithubHelper.isAuthorized(job, commentAuthor)) {
+                                    if (!GithubHelper.isAuthorized(job, commentAuthor, branchProp.getMinimumPermissions())) {
                                         continue;
                                     }
                                     Pattern pattern = Pattern.compile(expectedCommentBody,
