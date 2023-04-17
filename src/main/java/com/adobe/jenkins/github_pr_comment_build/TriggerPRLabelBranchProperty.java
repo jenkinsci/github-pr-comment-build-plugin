@@ -3,7 +3,6 @@ package com.adobe.jenkins.github_pr_comment_build;
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.Run;
-import jenkins.branch.BranchProperty;
 import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -11,7 +10,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Allows a GitHub pull request comment to trigger an immediate build based on a comment string.
  */
-public class TriggerPRLabelBranchProperty extends BranchProperty {
+public class TriggerPRLabelBranchProperty extends TriggerBranchProperty {
     /**
      * The comment body to trigger a new build on.
      */
