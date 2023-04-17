@@ -5,4 +5,7 @@
     <f:entry title="gitHub label regex" field="label">
         <f:textbox />
     </f:entry>
+    <f:entry field="minimumPermissions" title="Minimum Permissions on repository to trigger the build">
+        <f:select default="WRITE" />
+    </f:entry>
 </j:jelly>

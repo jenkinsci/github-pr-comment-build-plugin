@@ -147,6 +147,9 @@ public class IssueLabelGHEventSubscriber extends GHEventsSubscriber {
                                     Pattern pattern = Pattern.compile(expectedLabel,
                                             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
                                     if (pattern.matcher(label).matches()) {
+                                        if (!GithubHelper.isAuthorized(job, labellingAuthor, branchProp.getMinimumPermissions())) {
+                                            continue;
+                                        }
                                         if (alreadyTriggeredJobs.add(job)) {
                                             ParameterizedJobMixIn.scheduleBuild2(job, 0,
                                                     new CauseAction(new GitHubPullRequestLabelCause(
