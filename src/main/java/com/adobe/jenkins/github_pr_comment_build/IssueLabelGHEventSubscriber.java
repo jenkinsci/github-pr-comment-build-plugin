@@ -93,17 +93,17 @@ public class IssueLabelGHEventSubscriber extends GHEventsSubscriber {
 
         final Pattern pullRequestJobNamePattern = Pattern.compile("^PR-" + pullRequestId + "\\b.*$", Pattern.CASE_INSENSITIVE);
 
-        final String label = json.getJSONObject("label").getString("name");
-        final String labelUrl = json.getJSONObject("label").getString("url");
-
-        // Make sure the action is edited or created (not deleted)
+        // Make sure the action is labeled
         String action = json.getString("action");
         if (!ACTION_LABELED.equals(action)) {
-            LOGGER.log(Level.FINER, "Event is labeled ({0}) for PR {1}",
+            LOGGER.log(Level.FINER, "Event is not labeled ({0}) for PR {1}, ignoring",
                     new Object[]{action, pullRequestUrl}
             );
             return;
         }
+
+        final String label = json.getJSONObject("label").getString("name");
+        final String labelUrl = json.getJSONObject("label").getString("url");
 
         // Make sure the repository URL is valid
         String repoUrl = json.getJSONObject("repository").getString("html_url");
