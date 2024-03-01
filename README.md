@@ -13,6 +13,7 @@ job if a comment body matches the configured value, such as "rerun the build".
 This is implemented as a branch property on multibranch jobs.
 
 ### Setup
+
 For the plugin to work your multibranch job must use one of the "Discover pull requests from..." behaviors.
 For example:
 ![GitHub Multibranch PR Behavior](docs/pull-request-behavior.png)
