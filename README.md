@@ -104,4 +104,6 @@ Initial release
 
 ### Releasing new versions
 
-Use the instructions found [in the Jenkins docs](https://www.jenkins.io/doc/developer/publishing/releasing/).
+Use the instructions found [in the Jenkins docs](https://www.jenkins.io/doc/developer/publishing/releasing/) for GitHub
+releases. The main point here is to make sure the PR that releases a new feature has the "enhancement" label on it, and
+this will automatically trigger a new release.
