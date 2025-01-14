@@ -23,7 +23,9 @@
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/github-pr-comment-build-plugin</gitHubRepo>
-        <jenkins.version>2.176.4</jenkins.version>
+        <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+        <jenkins.baseline>2.176</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.4</jenkins.version>
         <java.level>8</java.level>
     </properties>
 
@@ -60,7 +62,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.176.x</artifactId>
+                <artifactId>bom-${jenkins.baseline}.x</artifactId>
                 <version>13</version>
                 <scope>import</scope>
                 <type>pom</type>
