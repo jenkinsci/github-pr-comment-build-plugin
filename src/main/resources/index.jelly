@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+   Allows rebuilds of multibranch PR jobs based on GitHub PR comments.
+</div>
