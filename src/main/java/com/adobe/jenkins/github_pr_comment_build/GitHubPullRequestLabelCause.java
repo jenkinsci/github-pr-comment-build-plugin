@@ -30,7 +30,7 @@ public final class GitHubPullRequestLabelCause extends Cause implements Serializ
     @Whitelisted
     @Override
     public String getShortDescription() {
-        return "GitHub pull request Label";
+        return String.format("GitHub pull request label \"%s\" by %s", label, labellingAuthor);
     }
 
     /**

@@ -26,7 +26,7 @@ public final class GitHubPullRequestUpdateCause extends Cause implements Seriali
     @Whitelisted
     @Override
     public String getShortDescription() {
-        return "GitHub pull request update";
+        return String.format("GitHub pull request update by %s", updateAuthor);
     }
 
     /**

@@ -26,7 +26,7 @@ public final class GitHubPullRequestReviewCause extends Cause implements Seriali
     @Whitelisted
     @Override
     public String getShortDescription() {
-        return "GitHub pull request review";
+        return String.format("GitHub pull request review by %s", reviewAuthor);
     }
 
     /**
