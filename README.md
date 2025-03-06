@@ -56,6 +56,22 @@ If you would like untrusted users to be able to trigger builds,
 check the "Allow Untrusted Users" checkbox. Use this feature with caution because
 it may open up security issues with your Jenkins infrastructure.
 
+### Using the PR Comment in a Pipeline Script
+
+In order to use a PR comment in a pipeline script, the following code may be utilized. Note that this
+depends on an experimental pipeline method call (`currentBuild.getCauses`) which may break in the future.
+
+```groovy
+def triggerCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestCommentCause")
+if (triggerCauses) {
+    for (def triggerCause : triggerCauses) {
+        echo("""Author: ${triggerCause.commentAuthor}, Message: "${triggerCause.commentBody}" (${triggerCause.commentUrl})""")
+    }
+} else {
+    echo("Build was not started by a PR comment")
+}
+```
+
 ### GitHub organization folders
 
 When using the GitHub organization folders approach to creating multibranch
