@@ -3,7 +3,6 @@ package com.adobe.jenkins.github_pr_comment_build;
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.Run;
-import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -41,7 +40,7 @@ public class TriggerPRLabelBranchProperty extends TriggerBranchProperty {
     }
 
     @Extension
-    public static class DescriptorImpl extends BranchPropertyDescriptor {
+    public static class DescriptorImpl extends TriggerBranchPropertyDescriptorImpl {
 
         @Override
         public String getDisplayName() {
