@@ -58,10 +58,9 @@ public class GithubHelper {
 
     private static GHRepository getGHRepository(@Nonnull final Job<?, ?> job) throws IOException {
         SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
-        if (scmSource instanceof GitHubSCMSource) {
-            GitHubSCMSource gitHubSource = (GitHubSCMSource) scmSource;
+        if (scmSource instanceof GitHubSCMSource gitHubSource) {
             StandardCredentials credentials = Connector.lookupScanCredentials(
-                    job, gitHubSource.getApiUri(), gitHubSource.getCredentialsId());
+                    job, gitHubSource.getApiUri(), gitHubSource.getCredentialsId(), gitHubSource.getRepoOwner());
             GitHub github = Connector.connect(gitHubSource.getApiUri(), credentials);
             return github.getRepository(gitHubSource.getRepoOwner() + "/" + gitHubSource.getRepository());
         }
