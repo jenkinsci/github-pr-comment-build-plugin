@@ -141,7 +141,7 @@ public class PRUpdateGHEventSubscriber extends GHEventsSubscriber {
                                     propFound = true;
                                     if (alreadyTriggeredJobs.add(job)) {
                                         ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                                new CauseAction(new GitHubPullRequestUpdateCause(pullRequestUrl)));
+                                                new CauseAction(new GitHubPullRequestUpdateCause(author, pullRequestUrl)));
                                     } else {
                                         LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[]{job});
                                     }

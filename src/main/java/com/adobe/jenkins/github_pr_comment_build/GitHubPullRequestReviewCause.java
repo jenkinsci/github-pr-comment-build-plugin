@@ -10,13 +10,16 @@ import java.io.Serializable;
  * Created by Micky Loo on 05/02/2019.
  */
 public final class GitHubPullRequestReviewCause extends Cause implements Serializable {
+    private final String reviewAuthor;
     private final String pullRequestUrl;
 
     /**
      * Constructor.
-     * @param pullRequestUrl the URL for the GitHub comment
+     * @param reviewAuthor the author of the GitHub review
+     * @param pullRequestUrl the URL for the GitHub review
      */
-    public GitHubPullRequestReviewCause(String pullRequestUrl) {
+    public GitHubPullRequestReviewCause(String reviewAuthor, String pullRequestUrl) {
+        this.reviewAuthor = reviewAuthor;
         this.pullRequestUrl = pullRequestUrl;
     }
 
@@ -24,6 +27,16 @@ public final class GitHubPullRequestReviewCause extends Cause implements Seriali
     @Override
     public String getShortDescription() {
         return "GitHub pull request review";
+    }
+
+    /**
+     * Retrieves the author of the GitHub review for this cause.
+     * @return the author of the GitHub review
+     */
+    @Whitelisted
+    @Exported(visibility = 3)
+    public String getReviewAuthor() {
+        return reviewAuthor;
     }
 
     /**

@@ -62,13 +62,44 @@ In order to use a PR comment in a pipeline script, the following code may be uti
 depends on an experimental pipeline method call (`currentBuild.getCauses`) which may break in the future.
 
 ```groovy
-def triggerCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestCommentCause")
-if (triggerCauses) {
-    for (def triggerCause : triggerCauses) {
-        echo("""Author: ${triggerCause.commentAuthor}, Message: "${triggerCause.commentBody}" (${triggerCause.commentUrl})""")
+// Comments
+def commentCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestCommentCause")
+if (commentCauses) {
+    for (def commentCause : commentCauses) {
+        echo("""Comment Author: ${commentCause.commentAuthor}, Body: "${commentCause.commentBody}" (${commentCause.commentUrl})""")
     }
 } else {
     echo("Build was not started by a PR comment")
+}
+
+// Labels
+def labelCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestLabelCause")
+if (labelCauses) {
+    for (def labelCause : labelCauses) {
+        echo("""Label Author: ${labelCause.labellingAuthor}, Label: "${labelCause.label}" (${labelCause.labelUrl})""")
+    }
+} else {
+    echo("Build was not started by a PR label")
+}
+
+// Reviews
+def reviewCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestReviewCause")
+if (reviewCauses) {
+    for (def reviewCause : reviewCauses) {
+        echo("""Review Author: ${reviewCause.reviewAuthor} (${reviewCause.pullRequestUrl})""")
+    }
+} else {
+    echo("Build was not started by a PR review")
+}
+
+// Updates
+def updateCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestUpdateCause")
+if (updateCauses) {
+    for (def updateCause : updateCauses) {
+        echo("""Update Author: ${updateCause.updateAuthor} (${updateCause.pullRequestUrl})""")
+    }
+} else {
+    echo("Build was not started by a PR update")
 }
 ```
 
