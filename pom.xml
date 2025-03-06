@@ -48,7 +48,7 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-aggregator</artifactId>
             <scope>test</scope>
-            <version>2.6</version>
+            <version>600.vb_57cdd26fdd7</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
