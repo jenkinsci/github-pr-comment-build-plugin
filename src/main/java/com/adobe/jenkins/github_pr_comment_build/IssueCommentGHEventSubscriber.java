@@ -59,6 +59,7 @@ public class IssueCommentGHEventSubscriber extends BasePRGHEventSubscriber<Trigg
             final GHEventPayload.IssueComment event = gitHub.parseEventPayload(
                     new StringReader(payload), GHEventPayload.IssueComment.class);
             event.getComment().createReaction(ReactionContent.PLUS_ONE);
+            LOGGER.log(Level.FINE, "Added plus one reaction to comment {0}", event.getComment().getHtmlUrl());
         } catch (final IOException e) {
             LOGGER.log(Level.WARNING, "Could not react to triggering comment", e);
         }
