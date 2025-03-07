@@ -5,6 +5,9 @@
     <f:entry title="Comment Body Regex" field="commentBody">
         <f:textbox />
     </f:entry>
+    <f:entry title="React to Comment" field="addReaction">
+        <f:checkbox default="true" />
+    </f:entry>
     <f:entry field="minimumPermissions" title="Minimum Permissions on repository to trigger the build">
         <f:select default="WRITE" />
     </f:entry>

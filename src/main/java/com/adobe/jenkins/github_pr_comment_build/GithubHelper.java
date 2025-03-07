@@ -27,6 +27,10 @@ public class GithubHelper {
     public static boolean isAuthorized(final Job<?, ?> job, final String author, String minimumPermissions) {
         try {
             GHRepository ghRepository = getGHRepository(job);
+            if (ghRepository == null) {
+                LOG.debug("Could not retrieve GitHub repository, User {} not authorized", author);
+                return false;
+            }
             GHPermissionType authorPermissions = ghRepository.getPermission(author);
             boolean authorized = false;
             switch (GHPermissionType.valueOf(minimumPermissions)) {
@@ -49,21 +53,42 @@ public class GithubHelper {
             LOG.debug("User {} authorized: {}", author, authorized);
             return authorized;
         } catch (final IOException | IllegalArgumentException e) {
-            LOG.debug("Received an exception while trying to check if user {} is a collaborator for repo of job {}",
-                    author, job.getFullName());
-            LOG.debug("isAuthorized() - Exception", e);
+            LOG.debug(String.format(
+                    "Received an exception while trying to check if user %s is a collaborator for repo of job %s",
+                    author, job.getFullName()), e);
             return false;
         }
     }
 
-    private static GHRepository getGHRepository(@Nonnull final Job<?, ?> job) throws IOException {
-        SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
+    public static GitHub getGitHub(SCMSource scmSource, @Nonnull final Job<?, ?> job) {
         if (scmSource instanceof GitHubSCMSource gitHubSource) {
-            StandardCredentials credentials = Connector.lookupScanCredentials(
-                    job, gitHubSource.getApiUri(), gitHubSource.getCredentialsId(), gitHubSource.getRepoOwner());
-            GitHub github = Connector.connect(gitHubSource.getApiUri(), credentials);
-            return github.getRepository(gitHubSource.getRepoOwner() + "/" + gitHubSource.getRepository());
+            final StandardCredentials credentials = Connector.lookupScanCredentials(
+                    job,
+                    gitHubSource.getApiUri(),
+                    gitHubSource.getCredentialsId(),
+                    gitHubSource.getRepoOwner()
+            );
+            try {
+                return Connector.connect(gitHubSource.getApiUri(), credentials);
+            } catch (final IOException | IllegalArgumentException e) {
+                LOG.debug(String.format("Received an exception while trying to retrieve a GitHub connection for job %s",
+                        job.getFullName()), e);
+                return null;
+            }
         }
+
         throw new IllegalArgumentException("Job's SCM is not GitHub.");
+    }
+
+    private static GHRepository getGHRepository(@Nonnull final Job<?, ?> job) throws IOException {
+        final SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
+        GitHub github = getGitHub(scmSource, job);
+        if (github == null) {
+            LOG.debug("Could not get GitHub repository, GitHub connection failed");
+            return null;
+        }
+        // Already checked by getGitHub method
+        final GitHubSCMSource gitHubSource = (GitHubSCMSource) scmSource;
+        return github.getRepository(gitHubSource.getRepoOwner() + "/" + gitHubSource.getRepository());
     }
 }
