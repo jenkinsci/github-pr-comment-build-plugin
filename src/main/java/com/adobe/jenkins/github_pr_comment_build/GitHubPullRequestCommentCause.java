@@ -29,7 +29,7 @@ public final class GitHubPullRequestCommentCause extends Cause implements Serial
     @Whitelisted
     @Override
     public String getShortDescription() {
-        return "GitHub pull request comment";
+        return String.format("GitHub pull request comment by %s: %s (%s)", commentAuthor, commentBody, commentUrl);
     }
 
     /**

@@ -10,20 +10,33 @@ import java.io.Serializable;
  * Created by saville on 10/13/2016.
  */
 public final class GitHubPullRequestUpdateCause extends Cause implements Serializable {
+    private final String updateAuthor;
     private final String pullRequestUrl;
 
     /**
      * Constructor.
-     * @param pullRequestUrl the URL for the GitHub comment
+     * @param updateAuthor the author for the GitHub update
+     * @param pullRequestUrl the URL for the GitHub update
      */
-    public GitHubPullRequestUpdateCause(String pullRequestUrl) {
+    public GitHubPullRequestUpdateCause(String updateAuthor, String pullRequestUrl) {
+        this.updateAuthor = updateAuthor;
         this.pullRequestUrl = pullRequestUrl;
     }
 
     @Whitelisted
     @Override
     public String getShortDescription() {
-        return "GitHub pull request update";
+        return String.format("GitHub pull request update by %s", updateAuthor);
+    }
+
+    /**
+     * Retrieves the author of the GitHub update for this cause.
+     * @return the author of the GitHub update
+     */
+    @Whitelisted
+    @Exported(visibility = 3)
+    public String getUpdateAuthor() {
+        return updateAuthor;
     }
 
     /**
