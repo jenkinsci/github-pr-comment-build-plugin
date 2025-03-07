@@ -1,10 +1,15 @@
 package com.adobe.jenkins.github_pr_comment_build;
 
 import com.cloudbees.jenkins.GitHubRepositoryName;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
+import jenkins.branch.BranchProperty;
+import jenkins.branch.MultiBranchProject;
+import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
@@ -14,7 +19,9 @@ import org.jenkinsci.plugins.github.extension.GHEventsSubscriber;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
 import org.jenkinsci.plugins.github_branch_source.PullRequestSCMHead;
 
-import java.util.function.Consumer;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -25,7 +32,7 @@ import static hudson.security.ACL.as;
 /**
  * Base subscriber for PR events.
  */
-public abstract class BasePRGHEventSubscriber extends GHEventsSubscriber {
+public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U> extends GHEventsSubscriber {
     /**
      * Logger.
      */
@@ -34,6 +41,8 @@ public abstract class BasePRGHEventSubscriber extends GHEventsSubscriber {
      * Regex pattern for a GitHub repository.
      */
     protected static final Pattern REPOSITORY_NAME_PATTERN = Pattern.compile("https?://([^/]+)/([^/]+)/([^/]+)");
+
+    protected abstract Class<T> getTriggerClass();
 
     @Override
     protected boolean isApplicable(Item item) {
@@ -67,8 +76,21 @@ public abstract class BasePRGHEventSubscriber extends GHEventsSubscriber {
         return changedRepository;
     }
 
-    protected void forEachMatchingJob(GitHubRepositoryName changedRepository, int pullRequestId, Consumer<Job<?, ?>> jobConsumer) {
+    /**
+     * Called after a job is started successfully, may be used for adding reactions or performing other actions.
+     * @param branchProp the branch property
+     * @param job the job
+     * @param postStartParam an arbitrary parameter
+     */
+    protected void postStartJob(T branchProp, Job<?, ?> job, U postStartParam) {
+        // no-op
+    }
+
+    protected void checkAndRunJobs(GitHubRepositoryName changedRepository, int pullRequestId, String author,
+                                   U postStartParam, BiFunction<Job<?, ?>, T, Cause> getCauseFunction) {
         try (ACLContext aclContext = as(ACL.SYSTEM)) {
+            boolean jobFound = false;
+            Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
             for (final SCMSourceOwner owner : SCMSourceOwners.all()) {
                 for (SCMSource source : owner.getSCMSources()) {
                     if (!(source instanceof GitHubSCMSource gitHubSCMSource)) {
@@ -79,17 +101,66 @@ public abstract class BasePRGHEventSubscriber extends GHEventsSubscriber {
                         for (Job<?, ?> job : owner.getAllJobs()) {
                             if (SCMHead.HeadByItem.findHead(job) instanceof PullRequestSCMHead prHead &&
                                     prHead.getNumber() == pullRequestId) {
-                                jobConsumer.accept(job);
-                            } else { // failed to match 'pullRequestJobNamePattern'
-                                LOGGER.log(Level.FINE,
-                                        "Skipping job [{0}] as it is not for pull request #{1}." +
-                                                "If this is unexpected, make sure the job is configured with a " +
-                                                "'discover pull requests...' behavior (see README)",
-                                        new Object[] { job.getName(), pullRequestId });
+                                boolean propFound = false;
+                                for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
+                                        getBranch(job).getProperties()) {
+                                    if (!(getTriggerClass().isAssignableFrom(prop.getClass()))) {
+                                        continue;
+                                    }
+                                    T branchProp = getTriggerClass().cast(prop);
+                                    propFound = true;
+                                    if (!GithubHelper.isAuthorized(job, author, branchProp.getMinimumPermissions())) {
+                                        continue;
+                                    }
+                                    Cause cause = getCauseFunction.apply(job, branchProp);
+                                    if (cause == null) {
+                                        // Do not trigger the job
+                                        continue;
+                                    }
+                                    if (alreadyTriggeredJobs.add(job)) {
+                                        ParameterizedJobMixIn.scheduleBuild2(job, 0, new CauseAction(cause));
+                                        LOGGER.log(Level.FINE,
+                                                "Triggered build for {0} due to PR event on {1}:{2}/{3}",
+                                                new Object[] {
+                                                        job.getFullName(),
+                                                        changedRepository.getHost(),
+                                                        changedRepository.getUserName(),
+                                                        changedRepository.getRepositoryName()
+                                                }
+                                        );
+                                        postStartJob(branchProp, job, postStartParam);
+                                    } else {
+                                        LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
+                                    }
+                                    break;
+                                }
+
+                                if (!propFound) {
+                                    LOGGER.log(Level.FINE,
+                                            "Job {0} for {1}:{2}/{3} does not have a branch property of type {4}",
+                                            new Object[] {
+                                                    job.getFullName(),
+                                                    changedRepository.getHost(),
+                                                    changedRepository.getUserName(),
+                                                    changedRepository.getRepositoryName(),
+                                                    getTriggerClass().getSimpleName()
+                                            }
+                                    );
+                                }
+
+                                jobFound = true;
                             }
                         }
                     }
                 }
+            }
+            if (!jobFound) {
+                LOGGER.log(Level.FINE, "PR event on {0}:{1}/{2} did not match any job",
+                        new Object[] {
+                                changedRepository.getHost(), changedRepository.getUserName(),
+                                changedRepository.getRepositoryName()
+                        }
+                );
             }
         }
     }
