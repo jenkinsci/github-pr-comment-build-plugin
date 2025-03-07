@@ -1,5 +1,7 @@
 package com.adobe.jenkins.github_pr_comment_build;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -13,8 +15,12 @@ import hudson.model.Job;
 import jenkins.branch.BranchProperty;
 import jenkins.branch.MultiBranchProject;
 import jenkins.model.ParameterizedJobMixIn;
+import jenkins.scm.api.SCMSource;
 import net.sf.json.JSONObject;
 import org.kohsuke.github.GHEvent;
+import org.kohsuke.github.GHEventPayload;
+import org.kohsuke.github.GitHub;
+import org.kohsuke.github.ReactionContent;
 
 import static com.google.common.collect.Sets.immutableEnumSet;
 import java.util.HashSet;
@@ -41,6 +47,22 @@ public class IssueCommentGHEventSubscriber extends BasePRGHEventSubscriber {
     @Override
     protected Set<GHEvent> events() {
         return immutableEnumSet(ISSUE_COMMENT);
+    }
+
+    private void reactToComment(final Job<?, ?> job, final String payload) {
+        try {
+            final SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
+            final GitHub gitHub = GithubHelper.getGitHub(scmSource, job);
+            if (gitHub == null) {
+                LOGGER.log(Level.WARNING, "Could not react to triggering comment, GitHub connection failed");
+                return;
+            }
+            final GHEventPayload.IssueComment event = gitHub.parseEventPayload(
+                    new StringReader(payload), GHEventPayload.IssueComment.class);
+            event.getComment().createReaction(ReactionContent.PLUS_ONE);
+        } catch (final IOException e) {
+            LOGGER.log(Level.WARNING, "Could not react to triggering comment", e);
+        }
     }
 
     /**
@@ -112,6 +134,10 @@ public class IssueCommentGHEventSubscriber extends BasePRGHEventSubscriber {
                                         changedRepository.getRepositoryName()
                                 }
                         );
+                        // Add reaction if configured
+                        if (branchProp.getAddReaction()) {
+                            reactToComment(job, payload);
+                        }
                     } else {
                         LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
                     }

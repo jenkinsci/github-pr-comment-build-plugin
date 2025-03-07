@@ -11,14 +11,20 @@ public class TriggerPRCommentBranchProperty extends TriggerBranchProperty {
      * The comment body to trigger a new build on.
      */
     private final String commentBody;
+    /**
+     * Whether to react to the comment if a build is successfully triggered.
+     */
+    private final boolean addReaction;
 
     /**
      * Constructor.
      * @param commentBody the comment body to trigger a new build on
+     * @param addReaction whether to react to the comment if a build is successfully triggered
      */
     @DataBoundConstructor
-    public TriggerPRCommentBranchProperty(String commentBody) {
+    public TriggerPRCommentBranchProperty(String commentBody, boolean addReaction) {
         this.commentBody = commentBody;
+        this.addReaction = addReaction;
     }
 
     /**
@@ -30,6 +36,14 @@ public class TriggerPRCommentBranchProperty extends TriggerBranchProperty {
             return "^REBUILD$";
         }
         return commentBody;
+    }
+
+    /**
+     * Whether to react to the comment if a build is successfully triggered.
+     * @return if a reaction should be added
+     */
+    public boolean getAddReaction() {
+        return addReaction;
     }
 
     @Extension
