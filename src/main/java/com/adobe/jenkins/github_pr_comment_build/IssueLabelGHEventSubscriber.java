@@ -2,17 +2,10 @@ package com.adobe.jenkins.github_pr_comment_build;
 
 import com.cloudbees.jenkins.GitHubRepositoryName;
 import hudson.Extension;
-import hudson.model.CauseAction;
-import hudson.model.Job;
-import jenkins.branch.BranchProperty;
-import jenkins.branch.MultiBranchProject;
-import jenkins.model.ParameterizedJobMixIn;
 import net.sf.json.JSONObject;
 import org.kohsuke.github.GHEvent;
 
-import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -24,7 +17,7 @@ import static org.kohsuke.github.GHEvent.PULL_REQUEST;
  * This subscriber manages {@link GHEvent} Label.
  */
 @Extension
-public class IssueLabelGHEventSubscriber extends BasePRGHEventSubscriber {
+public class IssueLabelGHEventSubscriber extends BasePRGHEventSubscriber<TriggerPRLabelBranchProperty, Void> {
     /**
      * Logger.
      */
@@ -34,6 +27,11 @@ public class IssueLabelGHEventSubscriber extends BasePRGHEventSubscriber {
      * String representing the created action on labeled PR.
      */
     private static final String ACTION_LABELED = "labeled";
+
+    @Override
+    protected Class<TriggerPRLabelBranchProperty> getTriggerClass() {
+        return TriggerPRLabelBranchProperty.class;
+    }
 
     @Override
     protected Set<GHEvent> events() {
@@ -77,71 +75,19 @@ public class IssueLabelGHEventSubscriber extends BasePRGHEventSubscriber {
         }
 
         LOGGER.log(Level.FINE, "Received label on PR {0} for {1}", new Object[]{pullRequestId, repoUrl});
-        AtomicBoolean jobFound = new AtomicBoolean(false);
-        Set<Job<?, ?>> alreadyTriggeredJobs = new HashSet<>();
-        forEachMatchingJob(changedRepository, pullRequestId, job -> {
-            // The findHead method above only works for multibranch projects,
-            // so no need to check the parent class
-            boolean propFound = false;
-            for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
-                    getBranch(job).getProperties()) {
-                if (!(prop instanceof TriggerPRLabelBranchProperty branchProp)) {
-                    continue;
-                }
-                propFound = true;
-                String expectedLabel = branchProp.getLabel();
-                Pattern pattern = Pattern.compile(expectedLabel,
-                        Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                if (pattern.matcher(label).matches()) {
-                    if (!GithubHelper.isAuthorized(job, labellingAuthor, branchProp.getMinimumPermissions())) {
-                        continue;
-                    }
-                    if (alreadyTriggeredJobs.add(job)) {
-                        ParameterizedJobMixIn.scheduleBuild2(job, 0,
-                                new CauseAction(new GitHubPullRequestLabelCause(
-                                        labelUrl, labellingAuthor, label)));
-                        LOGGER.log(Level.FINE,
-                                "Triggered build for {0} due to PR Label on {1}:{2}/{3}",
-                                new Object[]{
-                                        job.getFullName(),
-                                        changedRepository.getHost(),
-                                        changedRepository.getUserName(),
-                                        changedRepository.getRepositoryName()
-                                }
-                        );
-                    } else {
-                        LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[]{job});
-                    }
-                } else {
-                    LOGGER.log(Level.FINER,
-                            "Label does not match the trigger build label string ({0}) for {1}",
-                            new Object[]{expectedLabel, job.getFullName()}
-                    );
-                }
-                break;
+        checkAndRunJobs(changedRepository, pullRequestId, labellingAuthor, null,
+                (job, branchProp) -> {
+            String expectedLabel = branchProp.getLabel();
+            Pattern pattern = Pattern.compile(expectedLabel,
+                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+            if (pattern.matcher(label).matches()) {
+                return new GitHubPullRequestLabelCause(labelUrl, labellingAuthor, label);
             }
-
-            if (!propFound) {
-                LOGGER.log(Level.FINE,
-                        "Job {0} for {1}:{2}/{3} does not have a trigger PR Label branch property",
-                        new Object[]{
-                                job.getFullName(),
-                                changedRepository.getHost(),
-                                changedRepository.getUserName(),
-                                changedRepository.getRepositoryName()
-                        }
-                );
-            }
-
-            jobFound.set(true);
-        });
-        if (!jobFound.get()) {
-            LOGGER.log(Level.FINE, "PR label on {0}:{1}/{2} did not match any job",
-                    new Object[]{
-                            changedRepository.getHost(), changedRepository.getUserName(),
-                            changedRepository.getRepositoryName()
-                    }
+            LOGGER.log(Level.FINER,
+                    "Label does not match the trigger build label string ({0}) for {1}",
+                    new Object[]{expectedLabel, job.getFullName()}
             );
-        }
+            return null;
+        });
     }
 }
