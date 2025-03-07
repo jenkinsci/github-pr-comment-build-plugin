@@ -53,7 +53,7 @@ public class PRReviewGHEventSubscriber extends BasePRGHEventSubscriber<TriggerPR
             return;
         }
 
-        LOGGER.log(Level.FINE, "Received review on PR {1} for {2}", new Object[] { pullRequestId, repoUrl });
+        LOGGER.log(Level.FINE, "Received review on PR {0} for {1}", new Object[] { pullRequestId, repoUrl });
         checkAndRunJobs(changedRepository, pullRequestId, author, null,
                 (job, branchProp) -> {
             return new GitHubPullRequestReviewCause(author, pullRequestUrl);
