@@ -50,7 +50,7 @@ public class GithubHelper {
                     break;
             }
 
-            LOG.debug("User {} authorized: {}", author, authorized);
+            LOG.debug("User {} is {}authorized for job {}", author, authorized ? "" : "not ", job.getFullName());
             return authorized;
         } catch (final IOException | IllegalArgumentException e) {
             LOG.debug(String.format(

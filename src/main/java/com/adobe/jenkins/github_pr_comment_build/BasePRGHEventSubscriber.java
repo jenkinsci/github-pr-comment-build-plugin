@@ -9,6 +9,7 @@ import hudson.security.ACL;
 import hudson.security.ACLContext;
 import jenkins.branch.BranchProperty;
 import jenkins.branch.MultiBranchProject;
+import jenkins.branch.OrganizationFolder;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMSource;
@@ -98,7 +99,17 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
                     }
                     if (gitHubSCMSource.getRepoOwner().equalsIgnoreCase(changedRepository.getUserName()) &&
                             gitHubSCMSource.getRepository().equalsIgnoreCase(changedRepository.getRepositoryName())) {
+                        OrganizationFolder orgFolder = owner instanceof OrganizationFolder ? (OrganizationFolder) owner : null;
                         for (Job<?, ?> job : owner.getAllJobs()) {
+                            if (orgFolder != null) {
+                                if (SCMSource.SourceByItem.findSource(job) == source) {
+                                    LOGGER.log(Level.FINE,
+                                            "SCM owner is an organization folder and SCM source for job {0} matches",
+                                            job.getFullName());
+                                } else {
+                                    continue;
+                                }
+                            }
                             if (SCMHead.HeadByItem.findHead(job) instanceof PullRequestSCMHead prHead &&
                                     prHead.getNumber() == pullRequestId) {
                                 boolean propFound = false;
@@ -130,7 +141,7 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
                                         );
                                         postStartJob(branchProp, job, postStartParam);
                                     } else {
-                                        LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
+                                        LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job.getFullName() });
                                     }
                                     break;
                                 }
