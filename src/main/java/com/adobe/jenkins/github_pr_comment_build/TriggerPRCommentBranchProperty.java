@@ -28,6 +28,16 @@ public class TriggerPRCommentBranchProperty extends TriggerBranchProperty {
     }
 
     /**
+     * Backward-compatible Constructor, e.g. for Seed Jobs. Assumes no reaction is required.
+     * @param commentBody the comment body to trigger a new build on
+     */
+    @DataBoundConstructor
+    public TriggerPRCommentBranchProperty(String commentBody) {
+        this.commentBody = commentBody;
+        this.addReaction = false;
+    }
+
+    /**
      * The comment body to trigger a new build on.
      * @return the comment body to use
      */
