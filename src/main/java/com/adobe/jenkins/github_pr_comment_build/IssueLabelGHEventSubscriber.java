@@ -80,7 +80,7 @@ public class IssueLabelGHEventSubscriber extends BasePRGHEventSubscriber<Trigger
             String expectedLabel = branchProp.getLabel();
             Pattern pattern = Pattern.compile(expectedLabel,
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            if (pattern.matcher(label).matches()) {
+            if (pattern.matcher(label).find()) {
                 return new GitHubPullRequestLabelCause(labelUrl, labellingAuthor, label);
             }
             LOGGER.log(Level.FINER,

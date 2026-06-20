@@ -117,7 +117,7 @@ public class IssueCommentGHEventSubscriber extends BasePRGHEventSubscriber<Trigg
             String expectedCommentBody = branchProp.getCommentBody();
             Pattern pattern = Pattern.compile(expectedCommentBody,
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            if (commentBody == null || pattern.matcher(commentBody).matches()) {
+            if (commentBody == null || pattern.matcher(commentBody).find()) {
                 // Comment matches, return a cause to trigger the job to start
                 return new GitHubPullRequestCommentCause(commentUrl, commentAuthor, commentBody);
             }
