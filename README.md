@@ -101,6 +101,16 @@ if (updateCauses) {
 } else {
     echo("Build was not started by a PR update")
 }
+
+// Check runs
+def checkRunCauses = currentBuild.getBuildCauses("com.adobe.jenkins.github_pr_comment_build.GitHubPullRequestCheckRunCause")
+if (checkRunCauses) {
+    for (def checkRunCause : checkRunCauses) {
+        echo("""Check Run: "${checkRunCause.checkRunName}", Conclusion: ${checkRunCause.conclusion} (${checkRunCause.pullRequestUrl})""")
+    }
+} else {
+    echo("Build was not started by a PR check run completion")
+}
 ```
 
 ### GitHub organization folders
