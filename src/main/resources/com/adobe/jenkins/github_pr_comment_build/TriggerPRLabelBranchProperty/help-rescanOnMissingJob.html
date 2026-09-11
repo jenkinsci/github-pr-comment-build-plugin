@@ -1,0 +1,7 @@
+<div>
+    If a label is applied to a pull request before Jenkins has finished indexing that pull request's job
+    (common right after a PR is opened), the label event finds no job to trigger and is otherwise dropped.
+    Enabling this option requests an immediate rescan of this repository when that happens, then retries
+    the match a few times before giving up. Off by default, since it can add extra rescans/traffic for repos
+    that don't need it.
+</div>

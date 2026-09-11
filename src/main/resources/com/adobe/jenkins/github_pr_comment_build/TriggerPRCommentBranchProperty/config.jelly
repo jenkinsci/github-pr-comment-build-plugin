@@ -11,4 +11,7 @@
     <f:entry field="minimumPermissions" title="Minimum Permissions on repository to trigger the build">
         <f:select default="WRITE" />
     </f:entry>
+    <f:entry field="rescanOnMissingJob" title="Rescan repository if no matching job is found">
+        <f:checkbox />
+    </f:entry>
 </j:jelly>

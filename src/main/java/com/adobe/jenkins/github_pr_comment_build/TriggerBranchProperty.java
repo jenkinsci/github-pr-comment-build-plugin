@@ -12,10 +12,30 @@ import org.kohsuke.stapler.DataBoundSetter;
 abstract public class TriggerBranchProperty extends BranchProperty {
     protected boolean allowUntrusted;
     protected String minimumPermissions;
+    /**
+     * When true, and this event did not match any existing job, request a rescan of the owning
+     * multibranch project (to pick up a PR whose job was not yet indexed) and retry the match a
+     * few times in the background. Defaults to false so existing installs see no behavior change.
+     */
+    protected boolean rescanOnMissingJob;
 
     @Deprecated
     public boolean isAllowUntrusted() {
         return allowUntrusted;
+    }
+
+    /**
+     * Whether a missing job match should trigger a rescan-and-retry.
+     *
+     * @return true if a rescan-and-retry should be attempted when no job is found
+     */
+    public boolean isRescanOnMissingJob() {
+        return rescanOnMissingJob;
+    }
+
+    @DataBoundSetter
+    public void setRescanOnMissingJob(boolean rescanOnMissingJob) {
+        this.rescanOnMissingJob = rescanOnMissingJob;
     }
 
     @DataBoundSetter
