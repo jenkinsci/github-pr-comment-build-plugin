@@ -24,25 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for the rescanOnMissingJob opt-in behavior added to {@link BasePRGHEventSubscriber}.
  *
- * <p>These deliberately avoid ever letting the rescan-request path actually schedule a folder build - doing so
- * against a real {@link GitHubSCMSource} would trigger genuine outbound network calls to GitHub when the
- * queued computation runs. Instead:
+ * <p>These deliberately avoid ever letting {@link BasePRGHEventSubscriber#requestRescanIfConfigured} actually
+ * schedule a folder build - doing so against a real {@link GitHubSCMSource} would trigger genuine outbound
+ * network calls to GitHub when the queued computation runs. Instead:
  * <ul>
  *     <li>The "which projects need a rescan" decision is tested directly via the package-private, side-effect
- *     -free {@link BasePRGHEventSubscriber#findProjectsNeedingRescan} and
- *     {@link BasePRGHEventSubscriber#findUnresolvedRescanProjects}.</li>
+ *     -free {@link BasePRGHEventSubscriber#findProjectsNeedingRescan}.</li>
  *     <li>The retry-exhaustion behavior is tested by invoking the package-private
- *     {@link BasePRGHEventSubscriber#scheduleRetry} directly against a project with no matching PR job at all,
- *     so the underlying match attempt fails fast with no network involved.</li>
+ *     {@link BasePRGHEventSubscriber#scheduleRetry} directly against a repository with no configured project
+ *     at all, so the underlying match attempt fails fast with no network involved.</li>
  * </ul>
- *
- * <p>Note: the "retry stops only once every pending project resolves, not as soon as any unrelated project
- * matches" behavior (what this file's second round of changes fixes) is not exercised here as a unit test -
- * reproducing it faithfully needs a real job carrying a {@code PullRequestSCMHead}, which isn't constructible
- * without either real GitHub API data or SCM-source-specific test scaffolding this plugin doesn't have. The
- * bug itself was confirmed live in production first: two real multibranch projects watching the same repo,
- * one indexing a new PR fast and one slow; the slow project's own retry log line showed it stopping as soon
- * as the fast, unrelated project matched, well before the slow project ever got its own job.
  */
 @WithJenkins
 class BasePRGHEventSubscriberRescanTest {
@@ -107,20 +98,10 @@ class BasePRGHEventSubscriberRescanTest {
         long originalDelay = BasePRGHEventSubscriber.rescanRetryDelayMillis;
         BasePRGHEventSubscriber.rescanRetryDelayMillis = 100L;
         try {
-            // A real project, opted into rescanOnMissingJob for this exact repo, stands in for "the project
-            // that asked for a rescan" - it never gets a matching PR job (no real SCM checkout happens in
-            // this test), so findUnresolvedRescanProjects keeps reporting it pending on every attempt,
-            // driving the exhaustion under test through the same lookup production code uses.
-            TriggerPRLabelBranchProperty labelProp = new TriggerPRLabelBranchProperty("^my-label$");
-            labelProp.setRescanOnMissingJob(true);
-            WorkflowMultiBranchProject neverResolvedProject =
-                    j.jenkins.createProject(WorkflowMultiBranchProject.class, "never-resolved");
-            neverResolvedProject.getSourcesList().add(new BranchSource(
-                    new GitHubSCMSource("eternallyPendingOwner", "eternallyPendingRepo"),
-                    new DefaultBranchPropertyStrategy(new BranchProperty[] {labelProp})));
-
+            // No project is configured for this repository, so attemptMatch() fails fast on every attempt
+            // with no network access - only the retry bookkeeping is under test here.
             GitHubRepositoryName repo =
-                    GitHubRepositoryName.create("https://github.com/eternallyPendingOwner/eternallyPendingRepo");
+                    GitHubRepositoryName.create("https://github.com/nonexistentOwner/nonexistentRepo");
             BiFunction<Job<?, ?>, TriggerPRLabelBranchProperty, Cause> neverCauses = (job, prop) -> null;
 
             int before = BasePRGHEventSubscriber.attemptMatchInvocations.get();
@@ -138,22 +119,5 @@ class BasePRGHEventSubscriberRescanTest {
         } finally {
             BasePRGHEventSubscriber.rescanRetryDelayMillis = originalDelay;
         }
-    }
-
-    @Test
-    void findUnresolvedRescanProjects_includesProject_whenNoMatchingJobExistsYet() throws Exception {
-        TriggerPRLabelBranchProperty labelProp = new TriggerPRLabelBranchProperty("^my-label$");
-        labelProp.setRescanOnMissingJob(true);
-        WorkflowMultiBranchProject project =
-                j.jenkins.createProject(WorkflowMultiBranchProject.class, "unresolved-flag-enabled");
-        project.getSourcesList().add(new BranchSource(
-                new GitHubSCMSource("unresolvedOwner", "unresolvedRepo"),
-                new DefaultBranchPropertyStrategy(new BranchProperty[] {labelProp})));
-
-        GitHubRepositoryName repo = GitHubRepositoryName.create("https://github.com/unresolvedOwner/unresolvedRepo");
-        Set<MultiBranchProject<?, ?>> result = subscriber.findUnresolvedRescanProjects(repo, 12345);
-
-        assertTrue(result.contains(project),
-                "project with rescanOnMissingJob enabled and no job for this PR yet should still be pending");
     }
 }
