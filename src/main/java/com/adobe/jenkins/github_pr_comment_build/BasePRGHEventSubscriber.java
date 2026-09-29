@@ -35,6 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static hudson.security.ACL.as;
 
@@ -133,12 +134,23 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
             boolean jobFound = attemptMatch(changedRepository, pullRequestId, author, postStartParam,
                     getCauseFunction, alreadyTriggeredJobs);
 
-            if (!jobFound && requestRescanIfConfigured(changedRepository)) {
+            // Checked unconditionally, not just when !jobFound: a different, unrelated project matching this
+            // PR must not suppress a rescan for a project that specifically opted into rescanOnMissingJob and
+            // still has no job of its own - gating this on the aggregate jobFound would silently reintroduce
+            // the exact bug this method exists to fix, just one step earlier. The added cost is one more
+            // SCMSourceOwners.all() pass with cheap repo-name filtering (attemptMatch above already pays for
+            // one such pass on every event); the expensive getAllJobs() check only runs for the rare
+            // project(s) that both match this repo and opted in.
+            Set<MultiBranchProject<?, ?>> pendingProjects =
+                    findUnresolvedRescanProjects(changedRepository, pullRequestId);
+            if (!pendingProjects.isEmpty()) {
+                requestRescan(pendingProjects, changedRepository);
                 LOGGER.log(Level.INFO,
-                        "No job matched PR event on {0}:{1}/{2} yet; scheduling background rescan-and-retry",
+                        "PR event on {0}:{1}/{2} still missing a job in {3} rescan-configured project(s); "
+                                + "scheduling background rescan-and-retry",
                         new Object[] {
                                 changedRepository.getHost(), changedRepository.getUserName(),
-                                changedRepository.getRepositoryName()
+                                changedRepository.getRepositoryName(), pendingProjects.size()
                         }
                 );
                 scheduleRetry(changedRepository, pullRequestId, author, postStartParam, getCauseFunction,
@@ -159,23 +171,40 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
 
     /**
      * Schedules a single retry attempt on the shared Jenkins background timer, re-scheduling itself (rather
-     * than blocking a thread with {@code Thread.sleep}) until either a job matches or attempts run out.
+     * than blocking a thread with {@code Thread.sleep}) until either every rescan-configured project has a
+     * matching job, or attempts run out.
+     *
+     * <p>Re-derives the pending set fresh via {@link #findUnresolvedRescanProjects} on every attempt, rather
+     * than narrowing a set captured once at the start: this runs on the background {@link Timer} thread (not
+     * the webhook-handling thread {@link #checkAndRunJobs} must keep fast), so the extra lookup cost here is
+     * the same order as the {@link #attemptMatch} call already made on every attempt; in exchange it always
+     * reflects live configuration (e.g. a project reconfigured or deleted mid-retry-window).
+     *
+     * <p>Deliberately does <b>not</b> rely on {@link #attemptMatch}'s aggregate return value to decide whether
+     * to keep retrying: the source repository may be watched by other, unrelated multibranch projects that
+     * never opted into {@code rescanOnMissingJob} but happen to index new PRs faster (e.g. a smaller project
+     * with fewer branches). Stopping as soon as {@code attemptMatch} finds a job <i>anywhere</i> would
+     * incorrectly cut the retry short for the specific project(s) that actually asked for it and are still
+     * waiting on their own, slower indexing pass.
      *
      * <p>Package-private (rather than private) so tests can invoke the retry-and-exhaust behavior directly,
      * without needing a real, network-reachable {@code GitHubSCMSource} to drive it via
-     * {@link #requestRescanIfConfigured}.
+     * {@link #requestRescan}.
      */
     void scheduleRetry(GitHubRepositoryName changedRepository, int pullRequestId, String author,
                                U postStartParam, BiFunction<Job<?, ?>, T, Cause> getCauseFunction,
                                Set<Job<?, ?>> alreadyTriggeredJobs, int attemptsRemaining) {
         Timer.get().schedule(() -> {
-            boolean jobFound;
+            Set<MultiBranchProject<?, ?>> stillPending;
             try (ACLContext aclContext = as(ACL.SYSTEM)) {
-                jobFound = attemptMatch(changedRepository, pullRequestId, author, postStartParam,
+                attemptMatch(changedRepository, pullRequestId, author, postStartParam,
                         getCauseFunction, alreadyTriggeredJobs);
+                stillPending = findUnresolvedRescanProjects(changedRepository, pullRequestId);
             }
-            if (jobFound) {
-                LOGGER.log(Level.INFO, "PR event on {0}:{1}/{2} matched a job after rescan-and-retry",
+            if (stillPending.isEmpty()) {
+                LOGGER.log(Level.INFO,
+                        "PR event on {0}:{1}/{2} matched a job in every rescan-configured project after "
+                                + "rescan-and-retry",
                         new Object[] {
                                 changedRepository.getHost(), changedRepository.getUserName(),
                                 changedRepository.getRepositoryName()
@@ -186,14 +215,20 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
                         alreadyTriggeredJobs, attemptsRemaining - 1);
             } else {
                 LOGGER.log(Level.FINE,
-                        "PR event on {0}:{1}/{2} still did not match any job after rescan-and-retry",
+                        "PR event on {0}:{1}/{2} still missing a job in {3} rescan-configured project(s) after "
+                                + "rescan-and-retry: {4}",
                         new Object[] {
                                 changedRepository.getHost(), changedRepository.getUserName(),
-                                changedRepository.getRepositoryName()
+                                changedRepository.getRepositoryName(), stillPending.size(),
+                                projectNames(stillPending)
                         }
                 );
             }
         }, rescanRetryDelayMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private static String projectNames(Set<MultiBranchProject<?, ?>> projects) {
+        return projects.stream().map(MultiBranchProject::getFullName).collect(Collectors.joining(", "));
     }
 
     /**
@@ -225,8 +260,7 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
                                 continue;
                             }
                         }
-                        if (SCMHead.HeadByItem.findHead(job) instanceof PullRequestSCMHead prHead &&
-                                prHead.getNumber() == pullRequestId) {
+                        if (isPullRequestHead(job, pullRequestId)) {
                             boolean propFound = false;
                             for (BranchProperty prop : ((MultiBranchProject) job.getParent()).getProjectFactory().
                                     getBranch(job).getProperties()) {
@@ -284,10 +318,75 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
     }
 
     /**
+     * Schedules an immediate rescan of each given project, so a not-yet-indexed PR job gets created without
+     * waiting for the next periodic scan.
+     */
+    private void requestRescan(Set<MultiBranchProject<?, ?>> projects, GitHubRepositoryName changedRepository) {
+        for (MultiBranchProject<?, ?> project : projects) {
+            LOGGER.log(Level.INFO, "Requesting rescan of {0} after PR event on {1}:{2}/{3} matched no job",
+                    new Object[] {
+                            project.getFullName(), changedRepository.getHost(),
+                            changedRepository.getUserName(), changedRepository.getRepositoryName()
+                    }
+            );
+            ((ComputedFolder<?>) project).scheduleBuild(0, new RescanCause());
+        }
+    }
+
+    /**
+     * Narrows {@link #findProjectsNeedingRescan} to the subset that don't yet have a job matching
+     * {@code pullRequestId} - i.e. the projects that both asked for a rescan-and-retry and still need one.
+     *
+     * <p>This distinction matters because the source repository may be watched by other multibranch projects
+     * that never opted into {@code rescanOnMissingJob} (or opted in and already resolved on an earlier
+     * attempt); their state must not influence whether a <i>different</i>, still-unresolved project keeps
+     * being retried. See {@link #scheduleRetry} for how this set is used across retry attempts.
+     *
+     * @return the opted-in projects that still lack a job for {@code pullRequestId}, empty if none
+     */
+    Set<MultiBranchProject<?, ?>> findUnresolvedRescanProjects(GitHubRepositoryName changedRepository,
+                                                                int pullRequestId) {
+        return filterUnresolved(findProjectsNeedingRescan(changedRepository), pullRequestId);
+    }
+
+    /**
+     * Pure lookup (no side effects) of which of the given projects still lack a job matching
+     * {@code pullRequestId}.
+     */
+    private Set<MultiBranchProject<?, ?>> filterUnresolved(Set<MultiBranchProject<?, ?>> candidates,
+                                                            int pullRequestId) {
+        Set<MultiBranchProject<?, ?>> unresolved = new LinkedHashSet<>();
+        for (MultiBranchProject<?, ?> project : candidates) {
+            if (!hasMatchingJob(project, pullRequestId)) {
+                unresolved.add(project);
+            }
+        }
+        return unresolved;
+    }
+
+    private boolean hasMatchingJob(MultiBranchProject<?, ?> project, int pullRequestId) {
+        for (Job<?, ?> job : project.getAllJobs()) {
+            if (isPullRequestHead(job, pullRequestId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Shared predicate for "is this job's head the given pull request" - used both by {@link #attemptMatch}
+     * (scanning every job for a repo) and {@link #hasMatchingJob} (checking one project's jobs), so the two
+     * never drift into disagreeing about what counts as a match for a given PR.
+     */
+    private boolean isPullRequestHead(Job<?, ?> job, int pullRequestId) {
+        return SCMHead.HeadByItem.findHead(job) instanceof PullRequestSCMHead prHead
+                && prHead.getNumber() == pullRequestId;
+    }
+
+    /**
      * Looks for a {@link MultiBranchProject} matching the changed repository whose configured (project-level,
      * not per-job) branch property template has a {@link TriggerBranchProperty} of this subscriber's trigger
-     * type with {@code rescanOnMissingJob} enabled. If found, schedules an immediate rescan of that project
-     * so a not-yet-indexed PR job gets created without waiting for the next periodic scan.
+     * type with {@code rescanOnMissingJob} enabled.
      *
      * <p>Deliberately skips {@link OrganizationFolder} owners: rescanning an entire organization folder in
      * response to a single PR event would be far more expensive than the targeted case this is meant to help.
@@ -299,32 +398,12 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
      * using a different {@link BranchPropertyStrategy} (e.g. per-branch-name overrides) will not be detected
      * here even if the flag is set on it, and will fall back to the pre-existing (unfixed) behavior.
      *
-     * @return true if a rescan was requested for at least one matching project
-     */
-    private boolean requestRescanIfConfigured(GitHubRepositoryName changedRepository) {
-        Set<MultiBranchProject<?, ?>> toRescan = findProjectsNeedingRescan(changedRepository);
-        for (MultiBranchProject<?, ?> project : toRescan) {
-            LOGGER.log(Level.INFO, "Requesting rescan of {0} after PR event on {1}:{2}/{3} matched no job",
-                    new Object[] {
-                            project.getFullName(), changedRepository.getHost(),
-                            changedRepository.getUserName(), changedRepository.getRepositoryName()
-                    }
-            );
-            ((ComputedFolder<?>) project).scheduleBuild(0, new RescanCause());
-        }
-        return !toRescan.isEmpty();
-    }
-
-    /**
-     * Pure lookup (no side effects - does not schedule anything) of {@link MultiBranchProject}s matching the
-     * changed repository whose configured (project-level, not per-job) branch property template has a
-     * {@link TriggerBranchProperty} of this subscriber's trigger type with {@code rescanOnMissingJob} enabled.
+     * <p>Left package-private specifically so tests can verify this decision logic directly, without needing
+     * to observe a scheduled build (which would otherwise require either real network access for the SCM
+     * source or Jenkins queue/timing assertions). Does not itself check whether a job already exists for any
+     * particular pull request - see {@link #findUnresolvedRescanProjects} for that.
      *
-     * <p>Split out from {@link #requestRescanIfConfigured} - and left package-private - specifically so tests
-     * can verify this decision logic directly, without needing to observe a scheduled build (which would
-     * otherwise require either real network access for the SCM source or Jenkins queue/timing assertions).
-     *
-     * @return the matching projects, empty if none
+     * @return the matching projects regardless of whether they still need a rescan, empty if none configured
      */
     Set<MultiBranchProject<?, ?>> findProjectsNeedingRescan(GitHubRepositoryName changedRepository) {
         Set<MultiBranchProject<?, ?>> toRescan = new LinkedHashSet<>();
