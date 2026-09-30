@@ -127,8 +127,6 @@ trust pipeline scripts, etc).
 
 ## Changelog
 
-### Latest (Post September 20, 2021)
-
 ### Incremental Releases
 
 Releases starting with `58.v945be9f1661f` have been moved to incremental
