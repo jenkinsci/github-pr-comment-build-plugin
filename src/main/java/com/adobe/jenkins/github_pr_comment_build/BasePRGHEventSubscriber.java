@@ -269,12 +269,12 @@ public abstract class BasePRGHEventSubscriber<T extends TriggerBranchProperty, U
                                 }
                                 T branchProp = getTriggerClass().cast(prop);
                                 propFound = true;
-                                if (!GithubHelper.isAuthorized(job, author, branchProp.getMinimumPermissions())) {
-                                    continue;
-                                }
                                 Cause cause = getCauseFunction.apply(job, branchProp);
                                 if (cause == null) {
                                     // Do not trigger the job
+                                    continue;
+                                }
+                                if (!GithubHelper.isAuthorized(job, author, branchProp.getMinimumPermissions())) {
                                     continue;
                                 }
                                 if (alreadyTriggeredJobs.add(job)) {
