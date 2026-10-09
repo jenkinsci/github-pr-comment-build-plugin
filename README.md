@@ -113,6 +113,38 @@ if (checkRunCauses) {
 }
 ```
 
+### Differences between the functionality of this plugin and Pipeline GitHub plugin
+
+["Pipeline: Github" plugin](https://plugins.jenkins.io/pipeline-github/) also has a way to register for comments 
+and trigger builds when a comment is added on a PR. This is done by using 
+[`issueCommentTrigger`](https://plugins.jenkins.io/pipeline-github/#plugin-content-issuecommenttrigger) directive.
+
+There are differences between the two plugins.
+
+The way `issueCommentTrigger` works is as follows:
+
+1. You create a new branch or PR, with `issueCommentTrigger` in `Jenkinsfile`.
+2. Jenkins discovers this new addition (either by a webhook, a periodic scan, or a manual scan).
+3. Jenkins then proceeds to build this new branch or PR (as it's configured to trigger a new build).
+4. Jenkins checks out `Jenkinsfile`.
+5. It validates the file and starts processing it.
+6. Jenkins encounters the `issueCommentTrigger` directive and processes it.
+7. From this moment on, the comment regex is registered, and issuing a comment will trigger a build.
+
+If anything in the above list is not successful, issuing comments will not work, and there would be no indication as to why.
+E.g.: if Jenkins is not configured to trigger the first build, or `Jenkinsfile` is not valid (has merge conflicts), or the 
+execution of the groovy encounters errors before it gets to `issueCommentTrigger` directive, the registering for comments 
+will not be completed.
+
+As opposed to that, with this plugin it works according to the following:
+
+1. You define the property on _the multibranch pipeline as a whole_, either by configuring it manually in the pipeline configuration, or by Job DSL, etc.
+2. You create a new branch or PR.
+3. Jenkins discovers this new addition (either by a webhook, a periodic scan, or a manual scan).
+4. From this moment on, the comment regex is registered, and issuing a comment will trigger a build.
+
+As can be seen, with this plugin there is no need to process the actual `Jenkinsfile` _on each branch_ in order to register for comments.
+
 ### GitHub organization folders
 
 When using the GitHub organization folders approach to creating multibranch
